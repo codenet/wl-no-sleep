@@ -126,7 +126,7 @@ Theorem ble_nat_false : forall n m,
 (* An exercise in Logic.v *)
 Admitted.
 
-Inductive appears_in (n : nat) : list nat -> Prop :=
+Inductive appears_in (x : X) : list X -> Prop :=
 | ai_here : forall l, appears_in n (n::l)
 | ai_later : forall m l, appears_in n l -> appears_in n (m::l).
 
