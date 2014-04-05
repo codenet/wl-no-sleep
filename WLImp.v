@@ -143,6 +143,16 @@ Proof.
       apply E_Rel with (st':=[]).
 Qed.
 
+(* No acquire wakelocks, programs that don't acquire a wakelock will not have any sleep bug *)
+Inductive no_acq_wake: com -> Prop :=
+ | no_acq_wakeSkip : no_acq_wake(SKIP)
+ (*| no_acq_wakeAss : forall s1 s2, no_acq_wake( s1 ::= s2)*)
+ | no_acq_wakeSeq : forall (c1 c2: com), no_acq_wake(c1) -> no_acq_wake(c2) -> no_acq_wake(c1;;c2)
+ | no_acq_wakeIf : forall (b: bexp) (c1 c2: com), no_acq_wake(c1) -> no_acq_wake(c2) -> (no_acq_wake (IFB b THEN c1 ELSE c2 FI))
+ | no_acq_wakeWhile : forall (b: bexp) (c: com), no_acq_wake(c) -> (no_acq_wake (WHILE b DO c END))
+ | no_acq_wakeRel : forall wl, no_acq_wake(REL wl)
+ | no_acq_wakeCrit : forall c, no_acq_wake(c) -> no_acq_wake( {{ c }}).
+
 Inductive protected : com -> wlstate -> Prop := 
   | P_Skip : forall wl st, protected SKIP (cons wl st)
   | P_Seq : forall c1 c2 st st',
