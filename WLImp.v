@@ -66,7 +66,8 @@ Inductive com : Type :=
   | CIf : bexp -> com -> com -> com
   | CWhile : bexp -> com -> com
   | CAcq : wakelock -> com                   (** Acquire wakelock *)
-  | CRel : wakelock -> com.                  (** Release wakelock *)
+  | CRel : wakelock -> com                   (** Release wakelock *)
+  | CCritical : com -> com.                  (** Critical statements *)
 
 Notation "'SKIP'" :=
   CSkip.
@@ -80,6 +81,8 @@ Notation "'ACQ' l" :=
   (CAcq l) (at level 80, right associativity).
 Notation "'REL' l" :=
   (CRel l) (at level 80, right associativity).
+Notation "'{{' c '}}'" :=
+  (CCritical c) (at level 80, right associativity).
 
 
 (** A process is just a (command, wlstate) tuple. Command is current
@@ -116,6 +119,9 @@ Inductive ceval : com -> wlstate -> wlstate -> Prop :=
       (ACQ wl) / st || cons wl st
   | E_Rel : forall st st' wl,
       (REL wl) / (st' ++ (cons wl st)) || (st' ++ st)
+  | E_Critical : forall st st' c,
+      c / st || st' -> {{ c }} / st || st'
+
 
   where "c1 '/' st '||' st'" := (ceval c1 st st').
 
@@ -137,13 +143,45 @@ Proof.
       apply E_Rel with (st':=[]).
 Qed.
 
+Inductive protected : com -> wlstate -> Prop := 
+  | P_Skip : forall wl st, protected SKIP (cons wl st)
+  | P_Seq : forall c1 c2 st st',
+      protected c1 st ->
+      c1 / st  || st' ->
+      protected c2 st' ->
+      protected (c1 ;; c2) st
+  | P_IfTrue : forall st b c1 c2,
+      beval st b = true ->
+      protected c1 st ->
+      protected (IFB b THEN c1 ELSE c2 FI) st
+  | P_IfFalse : forall st b c1 c2,
+      beval st b = false ->
+      protected c2 st ->
+      protected (IFB b THEN c1 ELSE c2 FI) st
+  | P_WhileEnd : forall b c,
+      beval st b = false ->
+      protected (WHILE b DO c END) (cons _ _)
+  | P_WhileLoop : forall st st' st'' b c,
+      beval st b = true ->
+      c / st || st' ->
+      protected (WHILE b DO c END) st' ->
+      protected (WHILE b DO c END) st
+  | P_Acq : forall st wl,
+      protected (ACQ wl) st
+  | P_Rel : forall wl wl' wl'' st',
+      protected (REL wl) (cons wl' (cons wl'' st))
+  | P_Critical : forall st st' c,
+      protected SKIP st ->           (** Should be protected in beginning *)
+      protected c st ->              (** Command should be protected *)
+      c / st || st' ->
+      protected SKIP st' ->          (** Should be protected in end *)
+      protected {{ c }} st.
+
 (** Inductive onestep : process -> process -> Prop :=
 
 (** This emulates the processor, the processor takes a list of process and
 executes either one of them at random *)
 Inductive processor : list process -> list process -> Prop := *)
-  
-
 
 End WakeLock.
  
