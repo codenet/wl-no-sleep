@@ -81,7 +81,7 @@ Notation "'ACQ' l" :=
   (CAcq l) (at level 80, right associativity).
 Notation "'REL' l" :=
   (CRel l) (at level 80, right associativity).
-Notation "'{{' c '}}'" :=
+Notation "'{(' c ')}'" :=
   (CCritical c) (at level 80, right associativity).
 
 
@@ -120,7 +120,7 @@ Inductive ceval : com -> wlstate -> wlstate -> Prop :=
   | E_Rel : forall st st' wl,
       (REL wl) / (st' ++ (cons wl st)) || (st' ++ st)
   | E_Critical : forall st st' c,
-      c / st || st' -> {{ c }} / st || st'
+      c / st || st' -> {( c )} / st || st'
 
 
   where "c1 '/' st '||' st'" := (ceval c1 st st').
@@ -151,7 +151,7 @@ Inductive no_acq_wake: com -> Prop :=
  | no_acq_wakeIf : forall (b: bexp) (c1 c2: com), no_acq_wake(c1) -> no_acq_wake(c2) -> (no_acq_wake (IFB b THEN c1 ELSE c2 FI))
  | no_acq_wakeWhile : forall (b: bexp) (c: com), no_acq_wake(c) -> (no_acq_wake (WHILE b DO c END))
  | no_acq_wakeRel : forall wl, no_acq_wake(REL wl)
- | no_acq_wakeCrit : forall c, no_acq_wake(c) -> no_acq_wake( {{ c }}).
+ | no_acq_wakeCrit : forall c, no_acq_wake(c) -> no_acq_wake( {( c )}).
 
 Inductive protected : com -> wlstate -> Prop := 
   | P_Skip : forall wl st, protected SKIP (cons wl st)
@@ -168,24 +168,25 @@ Inductive protected : com -> wlstate -> Prop :=
       beval st b = false ->
       protected c2 st ->
       protected (IFB b THEN c1 ELSE c2 FI) st
-  | P_WhileEnd : forall b c,
-      beval st b = false ->
-      protected (WHILE b DO c END) (cons _ _)
-  | P_WhileLoop : forall st st' st'' b c,
+  | P_WhileEnd : forall l st' b c,
+      beval (l :: st') b = false ->
+      protected (WHILE b DO c END) (l :: st')
+  | P_WhileLoop : forall st st' b c,
       beval st b = true ->
       c / st || st' ->
       protected (WHILE b DO c END) st' ->
       protected (WHILE b DO c END) st
   | P_Acq : forall st wl,
       protected (ACQ wl) st
-  | P_Rel : forall wl wl' wl'' st',
+  | P_Rel : forall wl wl' wl'' st,
       protected (REL wl) (cons wl' (cons wl'' st))
   | P_Critical : forall st st' c,
       protected SKIP st ->           (** Should be protected in beginning *)
       protected c st ->              (** Command should be protected *)
       c / st || st' ->
       protected SKIP st' ->          (** Should be protected in end *)
-      protected {{ c }} st.
+      protected ( {( c )} ) st.
+
 
 (** Inductive onestep : process -> process -> Prop :=
 
