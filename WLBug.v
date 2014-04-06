@@ -1,6 +1,7 @@
 Require Export WLImp.
 Require Export WLHoare.
 Require Export Coq.Sets.Ensembles.
+Require Export Util.
 
 (** Definition of bug and correct program *)
 Inductive no_bug: Assertion := 
@@ -18,7 +19,7 @@ Inductive kill : com -> wl_set -> Prop :=
   | K_Acq : forall wl,
       kill (ACQ wl) wl_empty_set
   | K_Rel : forall wl,
-      kill (REL wl) (Subtract wakelock wl_empty_set wl)
+      kill (REL wl) (Add wakelock wl_empty_set wl)
   | K_Seq : forall c1 c2 wls wls',
       kill c1 wls ->
       kill c2 wls' ->
@@ -36,9 +37,14 @@ Example test_kill_1 :
        ELSE SKIP
      FI) wl_empty_set.
 Proof.
-  assert( H: wl_empty_set = (Union wakelock wl_empty_set wl_empty_set) ).
-  unfold wl_empty_set. admit.
-
+  replace wl_empty_set with (Union wakelock wl_empty_set wl_empty_set).
+  apply K_Seq. constructor.
+  replace wl_empty_set with 
+    (Intersection wakelock (Add wakelock wl_empty_set WL0) wl_empty_set).
+  apply K_If. apply K_Rel. apply K_SKIP.
+  
+  apply empty_intersect. apply empty_union.
+Qed.
 
 Inductive gen : com -> wl_set -> Prop := 
   | G_SKIP : gen SKIP wl_empty_set
@@ -56,6 +62,23 @@ Inductive gen : com -> wl_set -> Prop :=
       gen (IFB b THEN c1 ELSE c2 FI) (Union wakelock wls wls')
   | G_While : forall b c wls, 
       gen c wls -> gen (WHILE b DO c END) wls.
+
+Example test_gen_1 :
+  gen ((ACQ WL0);;
+     IFB BIsHeld WL0
+       THEN REL WL0
+       ELSE SKIP
+     FI) (Add wakelock wl_empty_set WL0).
+Proof.
+  replace (Add wakelock wl_empty_set WL0) 
+      with (Union wakelock (Add wakelock wl_empty_set WL0) wl_empty_set).
+  apply G_Seq. constructor.
+  replace wl_empty_set with 
+    (Union wakelock wl_empty_set wl_empty_set).
+  apply G_If. apply G_Rel. apply G_SKIP.
+  
+  apply empty_union. rewrite union_commute. apply empty_S_union.
+Qed.
 
 Inductive flow : wl_set -> com -> wl_set -> Prop :=
     | FLOW : forall inB c kB gB, 
@@ -75,7 +98,13 @@ Example test_flow_1 :
      FI)
   << (Add wakelock wl_empty_set WL0) >>.
 Proof. 
-  admit.
+  replace (Add wakelock wl_empty_set WL0) 
+    with (Union wakelock (Setminus wakelock wl_empty_set wl_empty_set) (Add wakelock wl_empty_set WL0)).
+  apply FLOW. 
+  apply test_kill_1. 
+  apply test_gen_1. 
+  rewrite empty_minus. rewrite empty_S_union. reflexivity.
+Qed.
 
 Theorem flow_no_bug : forall c,
   ~ (<< wl_empty_set >> c << wl_empty_set >>) ->
