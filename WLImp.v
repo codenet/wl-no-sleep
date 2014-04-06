@@ -2,8 +2,6 @@ Require Export SfLib.
 
 (** WLImp only has wakelock related statements and control flow statements *)
 
-Module WakeLock.
-
 (** Android Wakelocks *)
 Inductive wakelock : Type :=
   WakeLock : nat -> wakelock.
@@ -192,7 +190,4 @@ Inductive protected : com -> wlstate -> Prop :=
 
 (** This emulates the processor, the processor takes a list of process and
 executes either one of them at random *)
-Inductive processor : list process -> list process -> Prop := *)
-
-End WakeLock.
- 
+Inductive processor : list process -> list process -> Prop := *) 
