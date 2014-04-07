@@ -46,6 +46,17 @@ Proof.
   apply empty_intersect. apply empty_union.
 Qed.
 
+Example test_kill_2 :
+  kill ((ACQ WL0);;(REL WL0)) (Add wakelock wl_empty_set WL0).
+Proof.
+  replace (Add wakelock wl_empty_set WL0) 
+      with (Union wakelock wl_empty_set (Add wakelock wl_empty_set WL0)).
+  apply K_Seq. 
+  apply K_Acq.
+  apply K_Rel.
+  apply empty_S_union.
+Qed.      
+
 Inductive gen : com -> wl_set -> Prop := 
   | G_SKIP : gen SKIP wl_empty_set
   | G_Acq : forall wl,
@@ -80,6 +91,19 @@ Proof.
   apply empty_union. rewrite union_commute. apply empty_S_union.
 Qed.
 
+Example test_gen_2 :
+  gen (((ACQ WL0);;(REL WL0))) (Add wakelock wl_empty_set WL0).
+Proof.
+  replace (Add wakelock wl_empty_set WL0) with (Union wakelock (Add wakelock wl_empty_set WL0) (wl_empty_set)).
+  apply G_Seq.
+  apply G_Acq.
+  apply G_Rel.
+  rewrite union_commute.
+  apply empty_S_union.
+Qed.
+  
+
+
 Inductive flow : wl_set -> com -> wl_set -> Prop :=
     | FLOW : forall inB c kB gB, 
                kill c kB -> 
@@ -105,6 +129,22 @@ Proof.
   apply test_gen_1. 
   rewrite empty_minus. rewrite empty_S_union. reflexivity.
 Qed.
+
+Example test_flow_2 :
+  << wl_empty_set >>
+      ((ACQ WL0);;(REL WL0))
+  << (Add wakelock wl_empty_set WL0)>>.
+Proof.
+  replace (Add wakelock wl_empty_set WL0) with 
+  (Union wakelock (Setminus wakelock wl_empty_set (Add wakelock wl_empty_set WL0)) ((Add wakelock wl_empty_set WL0))).
+  apply FLOW.
+  apply test_kill_2.
+  apply test_gen_2.
+  rewrite empty_minus_S. rewrite empty_S_union. reflexivity.
+Qed.
+  
+  
+  
 
 Theorem flow_no_bug : forall c,
   ~ (<< wl_empty_set >> c << wl_empty_set >>) ->

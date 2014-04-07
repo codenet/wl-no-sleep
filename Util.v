@@ -23,6 +23,10 @@ Lemma empty_minus: forall U,
   (Setminus U (Empty_set U) (Empty_set U)) = Empty_set U.
     Admitted.
 
+Lemma empty_minus_S: forall U S, 
+  (Setminus U (Empty_set U) (S)) = Empty_set U.
+    Admitted.
+
 
 Lemma empty_S_union: forall U S, 
   (Union U (Empty_set U) S) = S.
