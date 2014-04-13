@@ -19,8 +19,20 @@ Lemma empty_intersect: forall U B,
 
     Admitted.
 
+Lemma empty_S_minus: forall U S, 
+  (Setminus U S (Empty_set U)) = S.
+    Admitted.
+
+
 Lemma empty_minus: forall U, 
   (Setminus U (Empty_set U) (Empty_set U)) = Empty_set U.
+Proof.  
+  intros U.
+  apply empty_S_minus.
+Qed.
+
+Lemma same_minus: forall U S, 
+  (Setminus U S S) = Empty_set U.
     Admitted.
 
 
