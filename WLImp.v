@@ -113,15 +113,26 @@ Inductive ceval : com -> wlstate -> wlstate -> Prop :=
       c / st || st' ->
       (WHILE b DO c END) / st' || st'' ->
       (WHILE b DO c END) / st || st''
-  | E_Acq : forall st wl,
+  | E_Acq_NHeld : forall st wl,
+      isWlHeld wl st = false ->
       (ACQ wl) / st || cons wl st
-  | E_Rel : forall st st' wl,
+  | E_Acq_Held : forall st wl,
+      isWlHeld wl st = true ->
+      (ACQ wl) / st || st
+  | E_Rel_Held : forall st st' wl,
       (REL wl) / (st' ++ (cons wl st)) || (st' ++ st)
+  | E_Rel_NHeld : forall st wl,
+      isWlHeld wl st = false ->
+      (REL wl) / st || st
   | E_Critical : forall st st' c,
       c / st || st' -> {( c )} / st || st'
 
-
   where "c1 '/' st '||' st'" := (ceval c1 st st').
+
+
+Inductive isAcq : wakelock -> wlstate -> Prop := 
+  | IA_Base : forall wl wls,
+             isAcq wl (wl::wls).
 
 Example ceval_example1:
     ((ACQ WL0);;
@@ -134,11 +145,11 @@ Example ceval_example1:
 Proof.
   apply E_Seq with ([WL0]).
   Case "acquire command".
-    apply E_Acq. 
+    apply E_Acq_NHeld. reflexivity.
   Case "if command".
     apply E_IfTrue.
       simpl. reflexivity.
-      apply E_Rel with (st':=[]).
+      eapply E_Rel_Held with (st':=[]).
 Qed.
 
 (* No acquire wakelocks, programs that don't acquire a wakelock will not have any sleep bug *)
