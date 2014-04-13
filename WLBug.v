@@ -148,6 +148,11 @@ Proof.
   rewrite empty_S_union. unfold Add. apply empty_S_union.
 Qed.
 
+Lemma flow_to_empty: forall c wls,
+  ( << wls >> c << wl_empty_set >> ) -> 
+  ( << wl_empty_set >> c << wl_empty_set >>).
+Admitted.
+
 Example test_flow_2 :
   << wl_empty_set >>
       ((ACQ WL0);;(REL WL0))
@@ -163,6 +168,115 @@ Proof.
 Qed.
 
 Theorem flow_no_bug : forall c,
-  ~ (<< wl_empty_set >> c << wl_empty_set >>) ->
-  ~ (correct_program c).
+  (<< wl_empty_set >> c << wl_empty_set >>) ->
+  (correct_program c).
+Proof.
+  intros c H. unfold correct_program. unfold hoare_triple.
+  com_cases (induction c) Case; intros st st' Hceval HP.
+  inversion Hceval; subst; assumption.
+
+  (* Acq *)
+  Focus 4.
+  inversion H. subst. inversion H2. subst. inversion H5. subst.
+  rewrite empty_minus in H0. rewrite union_commute in H0. 
+  rewrite empty_S_union in H0. unfold Add in H0. 
+  rewrite empty_S_union in H0. 
+  assert ( Hcontra : (wl_empty_set w)).
+  SCase "Proof of assertion".
+    rewrite <- H0. constructor. 
+  inversion Hcontra.
+
+  (* Rel *)
+  Focus 4.
+  inversion HP. subst. inversion Hceval. subst.
+  SCase "E_Rel_Held".
+    unfold empty_wlstate in H2.
+    assert ( Hcontra : (isWlHeld w []) = true).
+      SSCase "Proof of assertion". rewrite <- H2. 
+      induction st'0 as [ | w' st''].
+      SSSCase "nil". simpl. rewrite <- beq_wl_refl. reflexivity.
+      SSSCase "w' :: st'".  inversion H2.
+   inversion Hcontra.
+
+  SCase "E_Rel_NHeld". constructor.
+
+  (* If *)
+  Focus 2.
+  inversion Hceval; subst. 
+  SCase "true".
+  apply IHc1 with (st:=st).
+  inversion H. subst; try solve by inversion 1. subst.
+  rewrite H7. 
+  assert( Hwlo1 : wlo1 = wl_empty_set ).
+    eapply S_S_union_empty.
+    apply H7.
+
+  assert( Hwlo2 : wlo2 = wl_empty_set ).
+    rewrite union_commute in H7.
+    eapply S_S_union_empty.
+    apply H7.
+
+  subst. rewrite empty_S_union in H4. assumption. assumption. assumption.
+
+  SCase "false".
+  apply IHc2 with (st:=st).
+  inversion H. subst; try solve by inversion 1. subst.
+
+  assert( Hwlo1 : wlo1 = wl_empty_set ).
+    eapply S_S_union_empty.
+    apply H7.
+
+  assert( Hwlo2 : wlo2 = wl_empty_set ).
+    rewrite union_commute in H7.
+    eapply S_S_union_empty.
+    apply H7.
+
+  subst. rewrite empty_S_union. rewrite empty_S_union in H8. assumption. assumption. assumption.
+
+
+  (* While *)
+  (**Focus 2.
+  remember (WHILE b DO c END) as loop eqn:Hloop.
+  inversion H; subst; try solve by inversion 1. 
+  inversion H1. subst. clear H1. 
+  eapply IHc.
+  apply flow_to_empty in H0. assumption.
+  remember (WHILE b DO c END) as loop eqn:Hloop.
+  induction c; try constructor. eapply E_Seq. apply IHc1.
+  induction loop; try solve by inversion 1.
+  apply IHloop. 
+  inversion Hceval; subst. assumption.
+
+  induction loop; try solve by inversion 1. 
+  apply IHloop. inversion Hloop. subst.
+
+  rewrite <- Hloop. 
+unfold loop. reflexivity.
+
+  inversion H; subst; try solve by inversion 1. 
+  inversion H1. subst.
+  inversion Hceval; subst. assumption.
+  subst. apply flow_to_empty in H0. assumption.
+
+  inversion H2. subst.
+
+
+
+  inversion H2.
+  inversion H. subst. inversion H2. subst. inversion H5. subst.
+  rewrite empty_minus in H0. rewrite union_commute in H0. 
+  rewrite empty_S_union in H0. unfold Add in H0. 
+  rewrite empty_S_union in H0. 
+  assert ( Hcontra : (wl_empty_set w)).
+  SCase "Proof of assertion".
+    rewrite <- H0. constructor. 
+  inversion Hcontra.
+
+  inversion H0.
+
   
+  inversion H. subst. inversion H1. subst. inversion Hceval. subst.
+  eapply IHc2. **)
+  
+  
+Admitted.

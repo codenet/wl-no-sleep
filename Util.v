@@ -1,4 +1,5 @@
 Require Export SfLib.
+Require Export WLImp.
 Require Export Coq.Sets.Ensembles.
 
 Lemma intersect_commute: forall U B C, 
@@ -49,3 +50,17 @@ Lemma empty_union: forall U,
 Proof.
   intros U. rewrite empty_S_union. reflexivity. Qed.
 
+Lemma S_S_union_empty: forall U S1 S2,
+  Union U S1 S2 = (Empty_set U) -> 
+  S1 = (Empty_set U).
+Proof.
+  intros U S1 S2 H.
+  apply Extensionality_Ensembles. unfold Same_set. split.
+  unfold Included. intros w. rewrite <- H. apply Union_introl.
+  unfold Included. intros w. intros Hcontra. inversion Hcontra.
+Qed.
+
+Lemma beq_wl_refl : forall wl,
+                      true = beq_wl wl wl.
+Proof.
+  Admitted.

@@ -9,7 +9,6 @@ Inductive wakelock : Type :=
 Definition WL0 : wakelock := WakeLock 0.
 Definition WL1 : wakelock := WakeLock 1.
 
-
 Theorem eq_wl_dec : forall wl1 wl2 : wakelock, {wl1 = wl2} + {wl1 <> wl2}.
 Proof.
    intros wl1 wl2.
@@ -34,10 +33,15 @@ Definition isAnyWlHeld (st : wlstate ): bool :=
   | cons _ _ => true
   end.
 
+Fixpoint beq_wl (wl wl': wakelock) : bool :=
+  match (wl, wl') with
+  | (WakeLock n, WakeLock n') => beq_nat n n'
+  end.
+
 Fixpoint isWlHeld (wl: wakelock) (st: wlstate) : bool := 
   match st with 
   | [] => false
-  | cons wl' st' => if ( eq_wl_dec wl wl' ) then true
+  | cons wl' st' => if ( beq_wl wl wl' ) then true
                         else isWlHeld wl st'
   end.
 
@@ -64,8 +68,14 @@ Inductive com : Type :=
   | CIf : bexp -> com -> com -> com
   | CWhile : bexp -> com -> com
   | CAcq : wakelock -> com                   (** Acquire wakelock *)
-  | CRel : wakelock -> com                   (** Release wakelock *)
-  | CCritical : com -> com.                  (** Critical statements *)
+  | CRel : wakelock -> com.                   (** Release wakelock *)
+
+
+Tactic Notation "com_cases" tactic(first) ident(c) :=
+  first;
+  [ Case_aux c "SKIP" | Case_aux c ";;"
+  | Case_aux c "IFB" | Case_aux c "WHILE" 
+  | Case_aux c "Acq" | Case_aux c "Rel" ].
 
 Notation "'SKIP'" :=
   CSkip.
@@ -79,8 +89,6 @@ Notation "'ACQ' l" :=
   (CAcq l) (at level 80, right associativity).
 Notation "'REL' l" :=
   (CRel l) (at level 80, right associativity).
-Notation "'{(' c ')}'" :=
-  (CCritical c) (at level 80, right associativity).
 
 
 (** A process is just a (command, wlstate) tuple. Command is current
@@ -124,10 +132,17 @@ Inductive ceval : com -> wlstate -> wlstate -> Prop :=
   | E_Rel_NHeld : forall st wl,
       isWlHeld wl st = false ->
       (REL wl) / st || st
-  | E_Critical : forall st st' c,
-      c / st || st' -> {( c )} / st || st'
 
   where "c1 '/' st '||' st'" := (ceval c1 st st').
+
+Tactic Notation "ceval_cases" tactic(first) ident(c) :=
+  first;
+  [ Case_aux c "E_Skip" | Case_aux c "E_Seq"
+  | Case_aux c "E_IfTrue" | Case_aux c "E_IfFalse"
+  | Case_aux c "E_WhileEnd" | Case_aux c "E_WhileLoop"
+  | Case_aux c "E_Acq_NHeld" | Case_aux c "E_Acq_Held"
+  | Case_aux c "E_Rel_Held" | Case_aux c "E_Rel_NHeld"].
+
 
 
 Inductive isAcq : wakelock -> wlstate -> Prop := 
@@ -159,8 +174,7 @@ Inductive no_acq_wake: com -> Prop :=
  | no_acq_wakeSeq : forall (c1 c2: com), no_acq_wake(c1) -> no_acq_wake(c2) -> no_acq_wake(c1;;c2)
  | no_acq_wakeIf : forall (b: bexp) (c1 c2: com), no_acq_wake(c1) -> no_acq_wake(c2) -> (no_acq_wake (IFB b THEN c1 ELSE c2 FI))
  | no_acq_wakeWhile : forall (b: bexp) (c: com), no_acq_wake(c) -> (no_acq_wake (WHILE b DO c END))
- | no_acq_wakeRel : forall wl, no_acq_wake(REL wl)
- | no_acq_wakeCrit : forall c, no_acq_wake(c) -> no_acq_wake( {( c )}).
+ | no_acq_wakeRel : forall wl, no_acq_wake(REL wl).
 
 Inductive protected : com -> wlstate -> Prop := 
   | P_Skip : forall wl st, protected SKIP (cons wl st)
@@ -188,14 +202,7 @@ Inductive protected : com -> wlstate -> Prop :=
   | P_Acq : forall st wl,
       protected (ACQ wl) st
   | P_Rel : forall wl wl' wl'' st,
-      protected (REL wl) (cons wl' (cons wl'' st))
-  | P_Critical : forall st st' c,
-      protected SKIP st ->           (** Should be protected in beginning *)
-      protected c st ->              (** Command should be protected *)
-      c / st || st' ->
-      protected SKIP st' ->          (** Should be protected in end *)
-      protected ( {( c )} ) st.
-
+      protected (REL wl) (cons wl' (cons wl'' st)).
 
 (** Inductive onestep : process -> process -> Prop :=
 
