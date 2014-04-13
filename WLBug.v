@@ -70,7 +70,6 @@ Proof.
   apply empty_union.
 Qed.
 
-
 Example test_gen_1 :
   gen ((ACQ WL0);;
      IFB BIsHeld WL0
@@ -147,6 +146,20 @@ Proof.
 
   apply O_SS. constructor. constructor. constructor. rewrite empty_S_minus. 
   rewrite empty_S_union. unfold Add. apply empty_S_union.
+Qed.
+
+Example test_flow_2 :
+  << wl_empty_set >>
+      ((ACQ WL0);;(REL WL0))
+  << wl_empty_set >>.
+Proof.
+  eapply O_Seq.
+  apply O_SS. constructor. constructor. constructor.
+  rewrite empty_minus. rewrite union_commute. rewrite empty_S_union.
+  remember (Add wakelock wl_empty_set WL0) as wli. 
+  replace (wl_empty_set) 
+    with (Union wakelock wl_empty_set (Setminus wakelock (Add wakelock wl_empty_set WL0) (Add wakelock wl_empty_set WL0))).
+  subst.  apply O_SS; constructor. rewrite same_minus. apply empty_union.
 Qed.
 
 Theorem flow_no_bug : forall c,
