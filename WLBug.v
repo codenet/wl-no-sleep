@@ -1,5 +1,6 @@
 Require Export WLImp.
 Require Export WLHoare.
+Require Export WLUtil.
 Require Export Coq.Sets.Ensembles.
 Require Export Util.
 
@@ -9,6 +10,102 @@ Inductive no_bug: Assertion :=
 
 Definition correct_program (c: com) : Prop :=
   {{ no_bug }} c {{ no_bug }}.
+
+Inductive no_duplicate : Assertion :=  
+  | No_Empty: no_duplicate []
+  | No_Ind : forall wl st,
+               no_duplicate st -> 
+               ~ appears_in wl st ->
+               no_duplicate (wl :: st).
+
+
+Lemma rm_isWlHeld: forall wl wl' st,
+                   isWlHeld wl (wl' :: st) = false ->
+                   isWlHeld wl st = false.
+Proof.
+  intros wl wl' st H.
+  inversion H.
+  destruct (eq_wl_dec wl wl') eqn:Hwl.
+  SCase "wl = wl'". subst. rewrite <- beq_wl_refl in *. inversion H1.
+  SCase "wl <> wl'". 
+  assert (Heq: beq_wl wl wl' = false ). 
+    apply beq_wl_false_iff. assumption.
+  rewrite Heq in H1. rewrite Heq. reflexivity.
+Qed.
+
+Lemma rm_no_dup: forall wl st,
+                   no_duplicate (wl :: st) -> no_duplicate st.
+Proof.
+  intros wl st H.
+  inversion H. assumption.
+Qed.
+
+Lemma rm_appears_in: forall {X:Type} (x x' : X) lx lx',
+                       ~ appears_in x' (lx ++ (x::lx')) ->
+                       ~ appears_in x' (lx ++ lx').
+Proof.
+  intros X x x' lx lx' H Hcontra. apply H. clear H.
+  induction lx as [| y ly].
+  Case "[]". 
+    simpl in *. constructor. assumption.
+  Case "y :: ly".
+    inversion Hcontra; subst.
+    constructor. 
+    constructor. auto.
+Qed.
+
+Lemma rm_mid_no_dup: forall wl st st',
+                   no_duplicate (st ++ wl :: st') -> no_duplicate (st ++ st').
+Proof.
+  intros wl st st' H.
+  induction st as [| wl' st''].
+  Case "[]". simpl in *. eapply rm_no_dup. apply H.
+  Case "wl' :: st''".
+    apply No_Ind. apply IHst''. eapply rm_no_dup. apply H.
+    clear IHst''. inversion H; subst. 
+    apply (rm_appears_in wl wl' st'' st'). assumption.
+Qed.
+
+Theorem never_dup : forall c,
+  {{ no_duplicate }} c {{ no_duplicate }}.
+Proof.
+  intros c. unfold hoare_triple. 
+  com_cases (induction c) Case; subst; intros st st' Heval Hpre;
+  inversion Heval; subst; try auto.
+  Case ";;".
+  eapply IHc2. apply H4. eapply IHc1. apply H1. assumption.
+  Case "IFB".
+  eapply IHc1. apply H5. assumption.
+  eapply IHc2. apply H5. assumption.
+  Case "WHILE". 
+  Focus 2.
+  Case "Acq".
+    apply No_Ind. assumption. 
+    intros Hcontra. induction st as [ | wl st']. 
+    SCase "[]". inversion Hcontra. 
+    SCase "wl :: st'".  
+      destruct (eq_wl_dec w wl) eqn:Hwl. 
+      SSCase "w = wl".  
+        subst. simpl in H0. rewrite <- beq_wl_refl in H0. inversion H0.
+      SSCase "w <> wl".
+        apply IHst'. apply (rm_no_dup wl _). assumption.
+        apply (rm_isWlHeld _ wl _). assumption.
+        apply E_Acq_NHeld. apply (rm_isWlHeld _ wl _). assumption.
+        inversion Hcontra; subst. unfold not in n. 
+        assert (Hobv : wl = wl). reflexivity. apply n in Hobv. contradiction.
+        assumption.
+  Focus 2.
+  Case "Rel".
+    clear Heval.
+    eapply rm_mid_no_dup. apply Hpre.
+
+  (** While case *)
+    clear H5 H2 H1 st'0 IHc. 
+    remember (WHILE b DO c END) as loop eqn:Hloop.
+    induction Heval; subst; try solve by inversion 1.
+    assumption.
+    apply IHHeval2. assumption. 
+Admitted.  
 
 Definition wl_set : Type := Ensemble wakelock.
 Definition wl_empty_set : wl_set := Empty_set wakelock.

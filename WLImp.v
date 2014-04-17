@@ -143,8 +143,6 @@ Tactic Notation "ceval_cases" tactic(first) ident(c) :=
   | Case_aux c "E_Acq_NHeld" | Case_aux c "E_Acq_Held"
   | Case_aux c "E_Rel_Held" | Case_aux c "E_Rel_NHeld"].
 
-
-
 Inductive isAcq : wakelock -> wlstate -> Prop := 
   | IA_Base : forall wl wls,
              isAcq wl (wl::wls).
