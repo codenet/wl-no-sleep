@@ -228,28 +228,14 @@ Qed.
 
 Theorem no_acq_eqv:
    forall c, no_acq_wakeF c = true <-> no_acq_wake c.
-Proof.
+Proof with auto.
   intros.
   split.
-  com_cases (induction c) Case; intros; try constructor; auto.
   (*->*)
-  Case ";;".
-    apply IHc1.
-    apply andb_true_elim1 in H.
-    apply H.
-    apply IHc2.
-    apply andb_true_elim2 in H.
-    apply H.
-  Case "IFB".
-    apply IHc1.
-    apply andb_true_elim1 in H.
-    apply H.
-    apply IHc2.
-    apply andb_true_elim2 in H.
-    apply H.
-  Case "Acq".  
-    simpl in H.
-    inversion H.
+  com_cases (induction c) Case; intros; try constructor; auto;
+  simpl in H; inversion H; 
+  (** Seq and IFB cases **)
+  rewrite andb_true_iff in H1; inversion H1; auto.
   (*<-*)
   intros. no_acq_wake_cases (induction H) Case; try reflexivity; try assumption;
   (** Seq and IFB cases **)
