@@ -174,6 +174,105 @@ Inductive no_acq_wake: com -> Prop :=
  | no_acq_wakeWhile : forall (b: bexp) (c: com), no_acq_wake(c) -> (no_acq_wake (WHILE b DO c END))
  | no_acq_wakeRel : forall wl, no_acq_wake(REL wl).
 
+Fixpoint no_acq_wakeF (c : com) : bool :=
+  match c with
+  | SKIP       => true
+  | c1 ;; c2  => andb (no_acq_wakeF c1) (no_acq_wakeF c2)
+  | IFB _ THEN ct ELSE cf FI => andb (no_acq_wakeF ct) (no_acq_wakeF cf)
+  | WHILE _ DO ct END  => no_acq_wakeF ct
+  | REL _ => true
+  | ACQ _ => false
+  end.
+
+Example noAcquiredWakelock:
+    no_acq_wake((SKIP);;
+     IFB BIsHeld WL0
+       THEN REL WL0
+       ELSE SKIP
+     FI).
+Proof.
+  apply no_acq_wakeSeq.
+  apply no_acq_wakeSkip.
+  apply no_acq_wakeIf.
+  apply no_acq_wakeRel.
+  apply no_acq_wakeSkip.
+Qed.
+
+Example noAcquiredWakelockF:
+    no_acq_wakeF((SKIP);;
+     IFB BIsHeld WL0
+       THEN REL WL0
+       ELSE SKIP
+     FI) = true.
+Proof.
+  reflexivity.
+Qed.
+
+Theorem no_acq_eqv:
+   forall c, no_acq_wakeF c = true <-> no_acq_wake c.
+Proof.
+  intros.
+  split.
+  induction c.
+  (*->*)
+  Case "SKIP".
+    intros H.
+    constructor.
+  Case ";;".
+    intros H.
+    constructor.
+    apply IHc1.
+    apply andb_true_elim1 in H.
+    apply H.
+    apply IHc2.
+    apply andb_true_elim2 in H.
+    apply H.
+  Case "IFB".
+    intros.
+    constructor.
+    apply IHc1.
+    apply andb_true_elim1 in H.
+    apply H.
+    apply IHc2.
+    apply andb_true_elim2 in H.
+    apply H.
+  Case "WHILE".
+    intros.
+    constructor.
+    apply IHc.
+    assumption.
+  Case "ACQ".  
+    intros.
+    simpl in H.
+    inversion H.
+  Case "REL". 
+   intros.
+   constructor.
+  (*<-*)
+  intros.
+  induction H.
+  Case "SKIP".
+    reflexivity.
+  Case ";;".
+    assert (no_acq_wakeF c1 = true /\ no_acq_wakeF c2 = true).
+    split.
+    assumption.
+    assumption.
+    apply andb_true_intro.
+    apply H1.
+  Case "IFB".
+    assert (no_acq_wakeF c1 = true /\ no_acq_wakeF c2 = true).
+    split.
+    assumption.
+    assumption.
+    apply andb_true_intro.
+    apply H1.
+  Case "WHILE".
+    assumption.
+  Case "REL".
+    reflexivity.
+Qed.
+
 Inductive protected : com -> wlstate -> Prop := 
   | P_Skip : forall wl st, protected SKIP (cons wl st)
   | P_Seq : forall c1 c2 st st',

@@ -78,7 +78,10 @@ Proof.
   eapply IHc1. apply H5. assumption.
   eapply IHc2. apply H5. assumption.
   Case "WHILE". 
-  Focus 2.
+  eapply IHc.
+  assert ((WHILE b DO c END) = c). admit. rewrite <- H.
+  eapply Heval. 
+  assumption.
   Case "Acq".
     apply No_Ind. assumption. 
     intros Hcontra. induction st as [ | wl st']. 
@@ -94,18 +97,18 @@ Proof.
         inversion Hcontra; subst. unfold not in n. 
         assert (Hobv : wl = wl). reflexivity. apply n in Hobv. contradiction.
         assumption.
-  Focus 2.
   Case "Rel".
     clear Heval.
     eapply rm_mid_no_dup. apply Hpre.
 
-  (** While case *)
-    clear H5 H2 H1 st'0 IHc. 
+  (** While case 
+    clear H5 H2 H1 st'0 IHc.
     remember (WHILE b DO c END) as loop eqn:Hloop.
     induction Heval; subst; try solve by inversion 1.
     assumption.
-    apply IHHeval2. assumption. 
-Admitted.  
+    apply IHHeval2. assumption.
+    apply IHHeval1. rewrite <- Hloop. apply E_WhileEnd in Heval2. induction b0; subst; try solve by inversion 1.  SearchAbout beval.simpl. apply  E_WhileLoop.  inversion Heval2; subst. inversion Heval1;subst. assert (no_duplicate st'' -> no_duplicate st''). intros. assumption. apply IHHeval1. inversion IHHeval1. inversion H4. destruct b0; try solve by inversion 1.  inversion H. subst.*)
+Qed.  
 
 Definition wl_set : Type := Ensemble wakelock.
 Definition wl_empty_set : wl_set := Empty_set wakelock.
