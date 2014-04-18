@@ -167,12 +167,34 @@ Qed.
 
 (* No acquire wakelocks, programs that don't acquire a wakelock will not have any sleep bug *)
 Inductive no_acq_wake: com -> Prop :=
- | no_acq_wakeSkip : no_acq_wake(SKIP)
+ | no_acq_wakeSkip : 
+     no_acq_wake(SKIP)
  (*| no_acq_wakeAss : forall s1 s2, no_acq_wake( s1 ::= s2)*)
- | no_acq_wakeSeq : forall (c1 c2: com), no_acq_wake(c1) -> no_acq_wake(c2) -> no_acq_wake(c1;;c2)
- | no_acq_wakeIf : forall (b: bexp) (c1 c2: com), no_acq_wake(c1) -> no_acq_wake(c2) -> (no_acq_wake (IFB b THEN c1 ELSE c2 FI))
- | no_acq_wakeWhile : forall (b: bexp) (c: com), no_acq_wake(c) -> (no_acq_wake (WHILE b DO c END))
- | no_acq_wakeRel : forall wl, no_acq_wake(REL wl).
+ | no_acq_wakeSeq : 
+     forall (c1 c2: com), 
+       no_acq_wake(c1) -> 
+       no_acq_wake(c2) -> 
+       no_acq_wake(c1;;c2)
+ | no_acq_wakeIf : 
+     forall (b: bexp) (c1 c2: com), 
+       no_acq_wake(c1) -> 
+       no_acq_wake(c2) -> 
+       (no_acq_wake (IFB b THEN c1 ELSE c2 FI))
+ | no_acq_wakeWhile : 
+     forall (b: bexp) (c: com), 
+       no_acq_wake(c) -> 
+       (no_acq_wake (WHILE b DO c END))
+ | no_acq_wakeRel : 
+     forall wl, no_acq_wake(REL wl).
+
+Tactic Notation "no_acq_wake_cases" tactic(first) ident(c) :=
+  first;
+  [ Case_aux c "SKIP"
+ | Case_aux c ";;" 
+ | Case_aux c "IFB"
+ | Case_aux c "WHILE"
+ | Case_aux c "REL" ].
+
 
 Fixpoint no_acq_wakeF (c : com) : bool :=
   match c with
@@ -191,11 +213,7 @@ Example noAcquiredWakelock:
        ELSE SKIP
      FI).
 Proof.
-  apply no_acq_wakeSeq.
-  apply no_acq_wakeSkip.
-  apply no_acq_wakeIf.
-  apply no_acq_wakeRel.
-  apply no_acq_wakeSkip.
+  repeat constructor.
 Qed.
 
 Example noAcquiredWakelockF:
@@ -213,14 +231,9 @@ Theorem no_acq_eqv:
 Proof.
   intros.
   split.
-  induction c.
+  com_cases (induction c) Case; intros; try constructor; auto.
   (*->*)
-  Case "SKIP".
-    intros H.
-    constructor.
   Case ";;".
-    intros H.
-    constructor.
     apply IHc1.
     apply andb_true_elim1 in H.
     apply H.
@@ -228,49 +241,19 @@ Proof.
     apply andb_true_elim2 in H.
     apply H.
   Case "IFB".
-    intros.
-    constructor.
     apply IHc1.
     apply andb_true_elim1 in H.
     apply H.
     apply IHc2.
     apply andb_true_elim2 in H.
     apply H.
-  Case "WHILE".
-    intros.
-    constructor.
-    apply IHc.
-    assumption.
-  Case "ACQ".  
-    intros.
+  Case "Acq".  
     simpl in H.
     inversion H.
-  Case "REL". 
-   intros.
-   constructor.
   (*<-*)
-  intros.
-  induction H.
-  Case "SKIP".
-    reflexivity.
-  Case ";;".
-    assert (no_acq_wakeF c1 = true /\ no_acq_wakeF c2 = true).
-    split.
-    assumption.
-    assumption.
-    apply andb_true_intro.
-    apply H1.
-  Case "IFB".
-    assert (no_acq_wakeF c1 = true /\ no_acq_wakeF c2 = true).
-    split.
-    assumption.
-    assumption.
-    apply andb_true_intro.
-    apply H1.
-  Case "WHILE".
-    assumption.
-  Case "REL".
-    reflexivity.
+  intros. no_acq_wake_cases (induction H) Case; try reflexivity; try assumption;
+  (** Seq and IFB cases **)
+  try (apply andb_true_intro; split; assumption).
 Qed.
 
 Inductive protected : com -> wlstate -> Prop := 
