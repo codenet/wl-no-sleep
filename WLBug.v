@@ -66,49 +66,58 @@ Proof.
     apply (rm_appears_in wl wl' st'' st'). assumption.
 Qed.
 
+Lemma rm_appears : forall {X:Type} (x y : X) l,
+                     appears_in x (y :: l) -> x <> y -> appears_in x l.
+Admitted.
+
+Lemma rm_not_appears : forall {X:Type} (x y : X) l,
+                     ~appears_in x (y :: l) -> ~ appears_in x l.
+Admitted.
+
+Lemma isWlHeld_appear: forall wl st,
+                          isWlHeld wl st = false <-> ~ appears_in wl st.
+Proof.
+  intros wl st.
+  split.
+  Case "->".
+    intros H.
+    intros contra.
+    induction st as [| wl' st'].
+    inversion contra.
+    destruct (eq_wl_dec wl wl').
+    SCase "wl = wl'".
+      subst.
+      unfold isWlHeld in H.
+      rewrite <- beq_wl_refl in H.
+      inversion H.
+    SCase "wl <> wl'".
+      apply IHst'.
+      eapply rm_isWlHeld. apply H.
+      eapply rm_appears. apply contra. assumption.
+
+  Case "<-".
+    intros H.
+    induction st as [| wl' st'].
+    reflexivity.
+    assert( Hwl: beq_wl wl wl' = false ). 
+    admit.
+    unfold isWlHeld.
+   rewrite Hwl.
+   apply IHst'.
+   eapply rm_not_appears. apply H.   
+Qed.
+
 Theorem never_dup : forall c,
   {{ no_duplicate }} c {{ no_duplicate }}.
 Proof.
   intros c. unfold hoare_triple. 
-  com_cases (induction c) Case; subst; intros st st' Heval Hpre;
-  inversion Heval; subst; try auto.
-  Case ";;".
-  eapply IHc2. apply H4. eapply IHc1. apply H1. assumption.
-  Case "IFB".
-  eapply IHc1. apply H5. assumption.
-  eapply IHc2. apply H5. assumption.
-  Case "WHILE". 
-  eapply IHc.
-  assert ((WHILE b DO c END) = c). admit. rewrite <- H.
-  eapply Heval. 
-  assumption.
-  Case "Acq".
-    apply No_Ind. assumption. 
-    intros Hcontra. induction st as [ | wl st']. 
-    SCase "[]". inversion Hcontra. 
-    SCase "wl :: st'".  
-      destruct (eq_wl_dec w wl) eqn:Hwl. 
-      SSCase "w = wl".  
-        subst. simpl in H0. rewrite <- beq_wl_refl in H0. inversion H0.
-      SSCase "w <> wl".
-        apply IHst'. apply (rm_no_dup wl _). assumption.
-        apply (rm_isWlHeld _ wl _). assumption.
-        apply E_Acq_NHeld. apply (rm_isWlHeld _ wl _). assumption.
-        inversion Hcontra; subst. unfold not in n. 
-        assert (Hobv : wl = wl). reflexivity. apply n in Hobv. contradiction.
-        assumption.
-  Case "Rel".
-    clear Heval.
-    eapply rm_mid_no_dup. apply Hpre.
+  intros st st' Heval Hst.
+  ceval_cases (induction Heval) Case; try auto. 
+  apply No_Ind. assumption. 
+  apply isWlHeld_appear. assumption.
+  eapply rm_mid_no_dup. apply Hst.
+Qed.
 
-  (** While case 
-    clear H5 H2 H1 st'0 IHc.
-    remember (WHILE b DO c END) as loop eqn:Hloop.
-    induction Heval; subst; try solve by inversion 1.
-    assumption.
-    apply IHHeval2. assumption.
-    apply IHHeval1. rewrite <- Hloop. apply E_WhileEnd in Heval2. induction b0; subst; try solve by inversion 1.  SearchAbout beval.simpl. apply  E_WhileLoop.  inversion Heval2; subst. inversion Heval1;subst. assert (no_duplicate st'' -> no_duplicate st''). intros. assumption. apply IHHeval1. inversion IHHeval1. inversion H4. destruct b0; try solve by inversion 1.  inversion H. subst.*)
-Qed.  
 
 Definition wl_set : Type := Ensemble wakelock.
 Definition wl_empty_set : wl_set := Empty_set wakelock.
