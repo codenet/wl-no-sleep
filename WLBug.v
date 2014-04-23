@@ -68,11 +68,23 @@ Qed.
 
 Lemma rm_appears : forall {X:Type} (x y : X) l,
                      appears_in x (y :: l) -> x <> y -> appears_in x l.
-Admitted.
+Proof.
+  intros X x y l H1 H2.
+  inversion H1.
+  unfold not in H2.
+  apply H2 in H0.
+  contradiction.
+  assumption.
+Qed.
 
 Lemma rm_not_appears : forall {X:Type} (x y : X) l,
                      ~appears_in x (y :: l) -> ~ appears_in x l.
-Admitted.
+Proof.
+  intros X x y l H contra.
+  apply H.
+  constructor.
+  assumption.
+Qed.
 
 Lemma isWlHeld_appear: forall wl st,
                           isWlHeld wl st = false <-> ~ appears_in wl st.
@@ -100,8 +112,14 @@ Proof.
     induction st as [| wl' st'].
     reflexivity.
     assert( Hwl: beq_wl wl wl' = false ). 
-    admit.
-    unfold isWlHeld.
+      SCase "Pf of assert".
+        apply beq_wl_false_iff.
+        intros contra.
+        apply H.
+        subst.
+        apply ai_here.
+
+   unfold isWlHeld.
    rewrite Hwl.
    apply IHst'.
    eapply rm_not_appears. apply H.   
