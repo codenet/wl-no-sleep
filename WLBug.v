@@ -201,21 +201,49 @@ Proof.
 Qed.
 
 Inductive subset : wl_set -> wlstate -> Prop :=
-  | Subset : forall wl wl_s wls,
-             appears_in wl wls ->
-             In wakelock wl_s wl ->
-             subset wl_s wls. 
+  | Subset_Nil : forall wl_s, subset wl_s empty_wlstate
+  | Subset_Set_Add : forall wl wl_s wls,
+             subset wl_s wls ->
+             subset (Add wakelock wl_s wl) wls
+  | Subset_Both_Add : forall wl wl_s wls,
+             subset wl_s wls ->
+             subset (Add wakelock wl_s wl) (wl :: wls). 
+
+Tactic Notation "subset_cases" tactic(first) ident(c) :=
+  first;
+  [ Case_aux c "Nil" 
+  | Case_aux c "Set_Add" 
+  | Case_aux c "Both_Add" ].
 
 Lemma subset_empty : subset wl_empty_set empty_wlstate.
-Admitted.
+Proof.
+  constructor.
+Qed.
 
 Lemma subset_empty_2 : forall wls,
   subset wl_empty_set wls -> wls = empty_wlstate.
-Admitted.
+Proof.
+  intros wls H.
+  subset_cases (inversion H) Case. 
+  try auto. 
 
+  assert (Hcontra : In wakelock wl_empty_set wl).
+    rewrite <- H0. unfold In. unfold Add. 
+    apply Union_intror.
+    unfold In. constructor.
+  inversion Hcontra.
+
+  assert (Hcontra : In wakelock wl_empty_set wl).
+    rewrite <- H0. unfold In. unfold Add. 
+    apply Union_intror.
+    unfold In. constructor.
+  inversion Hcontra.
+Qed.
 
 Lemma subset_union : forall wl_s1 wl_s2 wls,
   subset wl_s1 wls -> subset (Union wakelock wl_s1 wl_s2) wls.
+Proof.
+  intros wl_s1 wl_s2 wls H.
 Admitted.
 
 Lemma subset_union_2 : forall wl_s1 wls1 wl,
