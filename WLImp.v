@@ -33,10 +33,14 @@ Definition isAnyWlHeld (st : wlstate ): bool :=
   | cons _ _ => true
   end.
 
+Hint Unfold isAnyWlHeld.
+
 Fixpoint beq_wl (wl wl': wakelock) : bool :=
   match (wl, wl') with
   | (WakeLock n, WakeLock n') => beq_nat n n'
   end.
+
+Hint Unfold beq_wl.
 
 Fixpoint isWlHeld (wl: wakelock) (st: wlstate) : bool := 
   match st with 
@@ -45,12 +49,16 @@ Fixpoint isWlHeld (wl: wakelock) (st: wlstate) : bool :=
                         else isWlHeld wl st'
   end.
 
+Hint Unfold isWlHeld.
+
 Inductive bexp : Type :=
   | BTrue : bexp
   | BFalse : bexp
   | BNot : bexp -> bexp
   | BAnd : bexp -> bexp -> bexp
   | BIsHeld : wakelock -> bexp.
+
+Hint Constructors bexp.
 
 Fixpoint beval (st : wlstate) (b : bexp)  : bool :=
   match b with
@@ -61,6 +69,7 @@ Fixpoint beval (st : wlstate) (b : bexp)  : bool :=
   | BIsHeld wl  => (isWlHeld wl st)
   end.
 
+Hint Unfold beval.
 
 Inductive com : Type :=
   | CSkip : com
@@ -70,6 +79,7 @@ Inductive com : Type :=
   | CAcq : wakelock -> com                   (** Acquire wakelock *)
   | CRel : wakelock -> com.                   (** Release wakelock *)
 
+Hint Constructors com.
 
 Tactic Notation "com_cases" tactic(first) ident(c) :=
   first;
@@ -135,6 +145,8 @@ Inductive ceval : com -> wlstate -> wlstate -> Prop :=
 
   where "c1 '/' st '||' st'" := (ceval c1 st st').
 
+Hint Constructors ceval.
+
 Tactic Notation "ceval_cases" tactic(first) ident(c) :=
   first;
   [ Case_aux c "E_Skip" | Case_aux c "E_Seq"
@@ -187,6 +199,8 @@ Inductive no_acq_wake: com -> Prop :=
  | no_acq_wakeRel : 
      forall wl, no_acq_wake(REL wl).
 
+Hint Constructors no_acq_wake.
+
 Tactic Notation "no_acq_wake_cases" tactic(first) ident(c) :=
   first;
   [ Case_aux c "SKIP"
@@ -205,6 +219,8 @@ Fixpoint no_acq_wakeF (c : com) : bool :=
   | REL _ => true
   | ACQ _ => false
   end.
+
+Hint Unfold no_acq_wakeF.
 
 Example noAcquiredWakelock:
     no_acq_wake((SKIP);;

@@ -12,6 +12,8 @@ Proof.
   assumption; assumption.
 Qed.
 
+Hint Rewrite intersect_commute.
+
 Lemma union_commute: forall U B C, 
   (Union U B C) = (Union U C B).
 Proof.
@@ -22,6 +24,8 @@ Proof.
   [apply Union_intror | apply Union_introl | apply Union_intror | apply Union_introl]; assumption.
 Qed.
 
+Hint Rewrite union_commute.
+
 Lemma empty_intersect: forall U B, 
   (Intersection U B (Empty_set U)) = Empty_set U.
 Proof.
@@ -29,6 +33,8 @@ Proof.
   apply Extensionality_Ensembles. 
   unfold Same_set. split; unfold Included; intros x H; inversion H; try assumption.
 Qed.
+
+Hint Rewrite empty_intersect.
 
 Lemma empty_S_minus: forall U S, 
   (Setminus U S (Empty_set U)) = S.
@@ -43,12 +49,16 @@ Proof.
     intros Hcontra. inversion Hcontra.    
 Qed.
 
+Hint Rewrite empty_S_minus.
+
 Lemma empty_minus: forall U, 
   (Setminus U (Empty_set U) (Empty_set U)) = Empty_set U.
 Proof.  
   intros U.
   apply empty_S_minus.
 Qed.
+
+Hint Rewrite empty_minus.
 
 Lemma same_minus: forall U S, 
   (Setminus U S S) = Empty_set U.
@@ -62,6 +72,8 @@ Proof.
     inversion H.
 Qed.
 
+Hint Rewrite same_minus.
+
 Lemma empty_minus_S: forall U S, 
   (Setminus U (Empty_set U) (S)) = Empty_set U.
 Proof.
@@ -73,6 +85,8 @@ Proof.
   Case "right".
     inversion H.
 Qed.
+
+Hint Rewrite empty_minus_S.
 
 Lemma empty_S_union: forall U S, 
   (Union U (Empty_set U) S) = S.
@@ -86,10 +100,14 @@ Proof.
     apply Union_intror. assumption.
 Qed.
 
+Hint Rewrite empty_S_union.
+
 Lemma empty_union: forall U, 
   (Union U (Empty_set U) (Empty_set U)) = Empty_set U.
 Proof.
   intros U. rewrite empty_S_union. reflexivity. Qed.
+
+Hint Rewrite empty_union.
 
 Lemma S_S_union_empty: forall U S1 S2,
   Union U S1 S2 = (Empty_set U) -> 
@@ -101,9 +119,13 @@ Proof.
   unfold Included. intros w. intros Hcontra. inversion Hcontra.
 Qed.
 
+Hint Rewrite S_S_union_empty.
+
 Lemma beq_wl_refl : forall wl,
                       true = beq_wl wl wl.
 Proof.
   intros. destruct wl as [n].
   unfold beq_wl. apply beq_nat_refl.
 Qed.
+
+Hint Rewrite beq_wl_refl.
