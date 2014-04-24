@@ -126,3 +126,8 @@ Proof.
   apply isWlHeld_appear. assumption.
   eapply rm_mid_no_dup. apply Hst.
 Qed.
+
+Lemma no_dup_rm : forall wl st st',
+  no_duplicate (st ++ wl :: st') ->
+  isWlHeld wl (st ++ st') = false.
+Admitted.
