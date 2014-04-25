@@ -27,6 +27,9 @@ Definition wlstate : Type := list wakelock.
 
 Definition empty_wlstate : wlstate :=  [].
 
+(* A definition that states that if in the given list of wlstate we have something 
+   diferrent to the empty_wlstate(empty list) then at least a wakelock is acquired at 
+   that point in the execution of a program *)
 Definition isAnyWlHeld (st : wlstate ): bool := 
   match st with 
   | [] => false
@@ -35,6 +38,9 @@ Definition isAnyWlHeld (st : wlstate ): bool :=
 
 Hint Unfold isAnyWlHeld.
 
+(* A fixpoint that given two wakelocks (wl and wl') compares them by equality, 
+   relying in the equality of the natural numbers value that those
+   two wakelocks have associated. Returning true if they are equal or false otherwise. *) 
 Fixpoint beq_wl (wl wl': wakelock) : bool :=
   match (wl, wl') with
   | (WakeLock n, WakeLock n') => beq_nat n n'
@@ -42,6 +48,8 @@ Fixpoint beq_wl (wl wl': wakelock) : bool :=
 
 Hint Unfold beq_wl.
 
+(* A fixpoint that given a wakelock and a wlstate return true if that wakelock 
+   is included in the wlstate list of wakelocks at that point of execution in the program.*)
 Fixpoint isWlHeld (wl: wakelock) (st: wlstate) : bool := 
   match st with 
   | [] => false
@@ -51,6 +59,7 @@ Fixpoint isWlHeld (wl: wakelock) (st: wlstate) : bool :=
 
 Hint Unfold isWlHeld.
 
+(* BIsHeld is added that construct given a wakelock it gives a bexp.*)
 Inductive bexp : Type :=
   | BTrue : bexp
   | BFalse : bexp
@@ -60,6 +69,8 @@ Inductive bexp : Type :=
 
 Hint Constructors bexp.
 
+(* BIsHeld is added, it yield true is for that given wlstate in the program that wakelock
+   is held (isWlHeld), if is not in the wlstate list then it yield false *) 
 Fixpoint beval (st : wlstate) (b : bexp)  : bool :=
   match b with
   | BTrue       => true
@@ -108,6 +119,17 @@ Inductive process : Type :=
 
 Reserved Notation "c1 '/' st '||' st'" (at level 40, st at level 39).
 
+(* Four new possible command evaluations are added:
+   E_Acq_NHeld, representing when we are acquiring a wakelock that it is not held 
+                in the wlstate list at that point of the execution, so we add the wakelock to wlstate.
+   E_Acq_Held, representing when we are acquiring a wakelock that it is already held 
+               in the wlstate list at that point of the execution, 
+               we reach the same wlstate because the wakelock it is already held.
+   E_Rel_Held, representing when we are releasing a wakelock that it was held in the initial wlstate 
+               of the release command, so we remove it from the wlstate list.
+   E_Rel_NHeld, representing when we are releasing a wakelock that it was not held in the initial wlstate
+                of the release command, so we reach the same wlstate as before because that wakelock 
+                is not in the wlstate list.*)
 Inductive ceval : com -> wlstate -> wlstate -> Prop :=
   | E_Skip : forall st,
       SKIP / st || st
@@ -159,6 +181,8 @@ Inductive isAcq : wakelock -> wlstate -> Prop :=
   | IA_Base : forall wl wls,
              isAcq wl (wl::wls).
 
+(* example of a command that goes from the empty_wlstate to 
+   the empty_wlstate by acquiring and then releasing the wakelock WL0.*)
 Example ceval_example1:
     ((ACQ WL0);;
      IFB BIsHeld WL0
@@ -177,11 +201,10 @@ Proof.
       eapply E_Rel_Held with (st':=[]).
 Qed.
 
-(* No acquire wakelocks, programs that don't acquire a wakelock will not have any sleep bug *)
+(* No acquired wakelocks, programs that don't acquire any wakelock will not have any sleep bug *)
 Inductive no_acq_wake: com -> Prop :=
  | no_acq_wakeSkip : 
      no_acq_wake(SKIP)
- (*| no_acq_wakeAss : forall s1 s2, no_acq_wake( s1 ::= s2)*)
  | no_acq_wakeSeq : 
      forall (c1 c2: com), 
        no_acq_wake(c1) -> 
@@ -209,7 +232,7 @@ Tactic Notation "no_acq_wake_cases" tactic(first) ident(c) :=
  | Case_aux c "WHILE"
  | Case_aux c "REL" ].
 
-
+(*Fixpoint version of No acquired wakelocks *)
 Fixpoint no_acq_wakeF (c : com) : bool :=
   match c with
   | SKIP       => true
@@ -242,6 +265,7 @@ Proof.
   reflexivity.
 Qed.
 
+(* Equivalence beetween Fixpoint and Inductive No acquired wakelock *)
 Theorem no_acq_eqv:
    forall c, no_acq_wakeF c = true <-> no_acq_wake c.
 Proof with auto.

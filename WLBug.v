@@ -11,13 +11,16 @@ Inductive no_bug: Assertion :=
 
 Hint Constructors no_bug.
 
+(*We define a correct program as a program that starts in a no_bug state 
+(empty_wlstate, the list of wakelocks is empty) and after a command it also ends up in a no_bug state*)
 Definition correct_program (c: com) : Prop :=
   {{ no_bug }} c {{ no_bug }}.
 
 Hint Unfold correct_program.
 
+(* If we have a program that doesn't acquire any wakelock then we can conclude that is a correct program*)
 Theorem no_acq_no_bug : forall c,
-                          no_acq_wake c -> correct_program c.
+  no_acq_wake c -> correct_program c.
 Proof.
   intros c H.
   unfold correct_program; 
@@ -25,28 +28,28 @@ Proof.
   intros st st' Heval Hpre.
   
   ceval_cases (induction Heval) Case; try auto; inversion H; subst.
-
+  (*Case E_Seq*)
   apply IHHeval2. assumption.
   apply IHHeval1; assumption. 
-
+  (*Case E_IfTrue*)
   apply IHHeval; assumption.
-
+  (*Case E_IfFalse*)
   apply IHHeval; assumption.
-
+  (*Case E_WhileLoop*)
   apply IHHeval2. assumption.
   apply IHHeval1; assumption.  
-
+  (*Case E_Rel_Held*)
   inversion Hpre. 
   unfold empty_wlstate in H1.
   apply app_cons_not_nil in H1.
   contradiction.  
 Qed.
 
-
+(*We define wl_set as a set of wakelocks using built in Coq Ensembles.*)
 Definition wl_set : Type := Ensemble wakelock.
 Definition wl_empty_set : wl_set := Empty_set wakelock.
 
-
+(* We define the action of Gen of the reaching definition for every command using conservative analysis.*)
 Inductive gen : com -> wl_set -> Prop := 
   | G_SKIP : gen SKIP wl_empty_set
   | G_Acq : forall wl,
@@ -65,6 +68,7 @@ Inductive gen : com -> wl_set -> Prop :=
   | G_While : forall b c wls, 
       gen c wls -> gen (WHILE b DO c END) wls
 
+(* We define the action of Kill of the reaching definition for every command using conservative analysis.*)
 with kill : com -> wl_set -> Prop := 
   | K_SKIP : kill SKIP wl_empty_set
   | K_Acq : forall wl,
@@ -82,6 +86,8 @@ with kill : com -> wl_set -> Prop :=
       kill (IFB b THEN c1 ELSE c2 FI) (Intersection wakelock wls wls')
   | K_While : forall b c, kill (WHILE b DO c END) wl_empty_set.
 
+(* Example of a program that acquires a wakelock but only release it in one branch of the IF
+   so kill will generate a wl_empty_set because we are using conservative analysis.*)
 Example test_kill_1 :
   kill ((ACQ WL0);;
      IFB BIsHeld WL0
@@ -103,6 +109,8 @@ Proof.
   apply empty_union.
 Qed.
 
+(* Example of a program that acquires a wakelock but only release it in one branch of the IF
+   so gen will generate a wl_set containing WL0 because we are using conservative analysis.*)
 Example test_gen_1 :
   gen ((ACQ WL0);;
      IFB BIsHeld WL0
@@ -126,11 +134,13 @@ Proof.
   rewrite empty_minus. rewrite union_commute. apply empty_S_union.
 Qed.
 
+(* single_stmt refers to those commands that are not composed of other commands.*)
 Inductive single_stmt : com -> Prop :=
   | SS_Skip : single_stmt SKIP
   | SS_Acq : forall wl, single_stmt (ACQ wl)
   | SS_Rel : forall wl, single_stmt (REL wl).
 
+(* We define the action of out of the reaching definition for every command using conservative analysis.*)
 Inductive out : com -> wl_set -> wl_set -> Prop :=
      | O_SS : forall wli wlg wlk c, 
                 single_stmt c ->
@@ -152,6 +162,8 @@ Inductive out : com -> wl_set -> wl_set -> Prop :=
 Notation "<< P >>  c  << Q >>" :=
   (out c P Q) (at level 90, c at next level).
 
+(* Program example that goes from a wl_empty_set to a wl_set that contains the 
+   wakelock WL0 to test the out inductive definition, possible sleep bug program*)
 Example test_flow_1 :
   << wl_empty_set >>
       ((ACQ WL0);;
@@ -186,6 +198,8 @@ Lemma flow_to_empty: forall c wls,
   ( << wl_empty_set >> c << wl_empty_set >>).
 Admitted.
 
+(*Program example that goes from a wl_empty_set to a wl_empty_set using the out inductive definitions, 
+  no sleep bug in this program*)
 Example test_flow_2 :
   << wl_empty_set >>
       ((ACQ WL0);;(REL WL0))
@@ -199,6 +213,7 @@ Proof.
     with (Union wakelock wl_empty_set (Setminus wakelock (Add wakelock wl_empty_set WL0) (Add wakelock wl_empty_set WL0))).
   subst.  apply O_SS; constructor. rewrite same_minus. apply empty_union.
 Qed.
+
 
 Inductive subset : wl_set -> wlstate -> Prop :=
   | Subset_Nil : forall wl_s, subset wl_s empty_wlstate
@@ -343,7 +358,6 @@ Proof.
   assumption.
   eapply subset_rm.
   apply Hset.
-
   inversion Hflow; subst.
   inversion H1; inversion H2; subst.
   rewrite empty_S_union.
@@ -352,6 +366,8 @@ Proof.
   assumption.
 Qed.
 
+(*Theorem that states that if a program goes from a wl_empty_set 
+  to another wl_empty_sey then we know it is a correct program.*)
 Theorem flow_no_bug : forall c,
   (<< wl_empty_set >> c << wl_empty_set >>) ->
   (correct_program c).
