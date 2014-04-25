@@ -369,3 +369,13 @@ Proof.
   
   apply subset_empty_2 in Hempty. subst. constructor.
 Qed.
+
+Corollary flow_no_bug' : forall c,
+  ~ (correct_program c) -> 
+  ~ (<< wl_empty_set >> c << wl_empty_set >>).
+Proof.
+  intros c H1 H2.
+  apply H1.
+  apply flow_no_bug.
+  assumption.
+Qed.
