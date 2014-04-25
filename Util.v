@@ -2,6 +2,7 @@ Require Export SfLib.
 Require Export WLImp.
 Require Export Coq.Sets.Ensembles.
 
+(* Lemma that states that the intersection is commutative, B intersection C equals C intersection B.*)
 Lemma intersect_commute: forall U B C, 
   (Intersection U B C) = (Intersection U C B).
 Proof.
@@ -14,6 +15,7 @@ Qed.
 
 Hint Rewrite intersect_commute.
 
+(* Lemma that states that the union is commutative, B union C equals C union B.*)
 Lemma union_commute: forall U B C, 
   (Union U B C) = (Union U C B).
 Proof.
@@ -26,6 +28,7 @@ Qed.
 
 Hint Rewrite union_commute.
 
+(*Lemma that states that the intersection of an empty set with another set (B) is always the empty set.*)
 Lemma empty_intersect: forall U B, 
   (Intersection U B (Empty_set U)) = Empty_set U.
 Proof.
@@ -36,6 +39,7 @@ Qed.
 
 Hint Rewrite empty_intersect.
 
+(*Lemma that states that some set (S) minus an empty set is always that some set(S).*)
 Lemma empty_S_minus: forall U S, 
   (Setminus U S (Empty_set U)) = S.
 Proof.
@@ -51,6 +55,7 @@ Qed.
 
 Hint Rewrite empty_S_minus.
 
+(*Lemma that states that the some set (S) minus an empty set is always that set(S).*)
 Lemma empty_minus: forall U, 
   (Setminus U (Empty_set U) (Empty_set U)) = Empty_set U.
 Proof.  
@@ -60,6 +65,7 @@ Qed.
 
 Hint Rewrite empty_minus.
 
+(* Lemma that states that some set (S) minus that same set (S) is always the empty set.*)
 Lemma same_minus: forall U S, 
   (Setminus U S S) = Empty_set U.
 Proof.
@@ -74,6 +80,7 @@ Qed.
 
 Hint Rewrite same_minus.
 
+(*Lemma that states that the empty set minus some set(S) is always the empty set.*)
 Lemma empty_minus_S: forall U S, 
   (Setminus U (Empty_set U) (S)) = Empty_set U.
 Proof.
@@ -88,6 +95,7 @@ Qed.
 
 Hint Rewrite empty_minus_S.
 
+(*Lemma that states that the empty set union some set (S) is always that some set (S).*)
 Lemma empty_S_union: forall U S, 
   (Union U (Empty_set U) S) = S.
 Proof.
@@ -102,6 +110,7 @@ Qed.
 
 Hint Rewrite empty_S_union.
 
+(*Lemma that states that the union of two empty set is always de empty set*)
 Lemma empty_union: forall U, 
   (Union U (Empty_set U) (Empty_set U)) = Empty_set U.
 Proof.
@@ -109,6 +118,8 @@ Proof.
 
 Hint Rewrite empty_union.
 
+(*Lemma that states that if we know that union of some two sets (S1 and S2) is equal to the empty set.
+  Then we can conclude that the first of those sets (S1) is equal to empty set.*)
 Lemma S_S_union_empty: forall U S1 S2,
   Union U S1 S2 = (Empty_set U) -> 
   S1 = (Empty_set U).
@@ -121,8 +132,9 @@ Qed.
 
 Hint Rewrite S_S_union_empty.
 
+(*Lemma that states if we compare the same wakelock (wl) for equality yields always true.*)
 Lemma beq_wl_refl : forall wl,
-                      true = beq_wl wl wl.
+  true = beq_wl wl wl.
 Proof.
   intros. destruct wl as [n].
   unfold beq_wl. apply beq_nat_refl.

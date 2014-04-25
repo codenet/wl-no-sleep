@@ -13,3 +13,14 @@ Description of the files
 * WLBug.v - Formally defines "correct program" (a program that does not have no-sleep bugs). Definies the reaching definition based analysis. Finally proves that the analysis is sound for finding no-sleep bugs.
 * WLUtil.v - Utility theorems related to wakelocks
 * Util.v - Other utility theorems
+
+Order of Compilation
+------------------------
+
+1. SfLib.v
+2. WLImp.v
+3. WLHoare.v
+4. Util.v
+5. WLUtil.v
+6. WLDup.v
+7. WLBug.v

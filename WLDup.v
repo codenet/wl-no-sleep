@@ -2,6 +2,7 @@ Require Export WLImp.
 Require Export WLHoare.
 Require Export WLUtil.
 
+(*Asserts that there are no duplicate wakelocks in the wl_state*)
 Inductive no_duplicate : Assertion :=  
   | No_Empty: no_duplicate []
   | No_Ind : forall wl st,
@@ -9,7 +10,9 @@ Inductive no_duplicate : Assertion :=
                ~ appears_in wl st ->
                no_duplicate (wl :: st).
 
-
+(*Lemma that states if in wl_state(wakelock list), some wakelock (wl) is not held.
+  If we remove a wakelock (wl') from that wl_state, then we know that the wakelock
+ (wl) will also not be held in the resultin wl_state.*)
 Lemma rm_isWlHeld: forall wl wl' st,
                    isWlHeld wl (wl' :: st) = false ->
                    isWlHeld wl st = false.
@@ -24,6 +27,8 @@ Proof.
   rewrite Heq in H1. rewrite Heq. reflexivity.
 Qed.
 
+(*Lemma that states that if there are no duplicates in a wl_state list that includes the wakelock wl,
+  then it will not be duplicates in a wl_state list that doesn't include it.*)
 Lemma rm_no_dup: forall wl st,
                    no_duplicate (wl :: st) -> no_duplicate st.
 Proof.
@@ -31,6 +36,9 @@ Proof.
   inversion H. assumption.
 Qed.
 
+(*Lemma that states that if some element x' doesn't appear in the concatenation of two lists 
+  which one include the element x
+  then it will not appear in the concatenation of those two lists not including the element x*)
 Lemma rm_appears_in: forall {X:Type} (x x' : X) lx lx',
                        ~ appears_in x' (lx ++ (x::lx')) ->
                        ~ appears_in x' (lx ++ lx').
@@ -45,6 +53,9 @@ Proof.
     constructor. auto.
 Qed.
 
+(*Lemma that states that if in the concatenation of two lists and one includes 
+  the element wl there are no duplicate wakelocks, then it will not be 
+  duplicate wakelocks in the concatenation of those two lists without wl.*)
 Lemma rm_mid_no_dup: forall wl st st',
                    no_duplicate (st ++ wl :: st') -> no_duplicate (st ++ st').
 Proof.
@@ -57,6 +68,8 @@ Proof.
     apply (rm_appears_in wl wl' st'' st'). assumption.
 Qed.
 
+(* Lemma that states if the element x appears in the cons of the list l and the element y, 
+   and the elements x and y are different, then x will appear in l.*)
 Lemma rm_appears : forall {X:Type} (x y : X) l,
                      appears_in x (y :: l) -> x <> y -> appears_in x l.
 Proof.
@@ -68,6 +81,8 @@ Proof.
   assumption.
 Qed.
 
+(* Lemma that states if the element x does not appears in the cons of the list l and the element y, 
+   then x will not appears in l.*)
 Lemma rm_not_appears : forall {X:Type} (x y : X) l,
                      ~appears_in x (y :: l) -> ~ appears_in x l.
 Proof.
@@ -77,6 +92,7 @@ Proof.
   assumption.
 Qed.
 
+(* Lemma that states that a wakelock is not held iff it does not appears in the wlstate list.*)
 Lemma isWlHeld_appear: forall wl st,
                           isWlHeld wl st = false <-> ~ appears_in wl st.
 Proof.
@@ -116,6 +132,8 @@ Proof.
    eapply rm_not_appears. apply H.   
 Qed.
 
+(* Theorem that proves that if we start in a no_duplicate state(no duplicate wakelocks in the wlstate list, 
+   forall possible programs we will only arrive to another no_duplicate state*)
 Theorem never_dup : forall c,
   {{ no_duplicate }} c {{ no_duplicate }}.
 Proof.
