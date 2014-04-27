@@ -132,6 +132,12 @@ Qed.
 
 Hint Rewrite S_S_union_empty.
 
+Lemma add_union : forall U S1 S2 u,
+  Union U (Add U S1 u) S2 = Add U (Union U S1 S2) u.
+Admitted.
+
+Hint Rewrite add_union.
+
 (*Lemma that states if we compare the same wakelock (wl) for equality yields always true.*)
 Lemma beq_wl_refl : forall wl,
   true = beq_wl wl wl.

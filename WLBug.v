@@ -140,6 +140,13 @@ Inductive single_stmt : com -> Prop :=
   | SS_Acq : forall wl, single_stmt (ACQ wl)
   | SS_Rel : forall wl, single_stmt (REL wl).
 
+Tactic Notation "ss_cases" tactic(first) ident(c) :=
+  first;
+  [ Case_aux c "SS_Skip" 
+  | Case_aux c "SS_Acq" 
+  | Case_aux c "SS_Rel" ].
+
+
 (* We define the action of out of the reaching definition for every command using conservative analysis.*)
 Inductive out : com -> wl_set -> wl_set -> Prop :=
      | O_SS : forall wli wlg wlk c, 
@@ -155,9 +162,26 @@ Inductive out : com -> wl_set -> wl_set -> Prop :=
                 out c1 wli wlo1 ->
                 out c2 wli wlo2 ->
                 out (IFB b THEN c1 ELSE c2 FI) wli (Union wakelock wlo1 wlo2)
-     | O_While : forall wli wlg wlo b c,
+     | O_WhileInv : forall wli b c,
+                out c wli wli ->
+                out (WHILE b DO c END) wli wli.
+     (**| O_While : forall wli wlo b c,
+                out c wli wlo ->
+                out (WHILE b DO c END) wli (Union wakelock wli wlo).**)
+
+     (**| O_While : forall wli wlg wlo b c,
+                gen c wlg ->
                 out c (Union wakelock wli wlg) wlo ->
-                out (WHILE b DO c END) wli wlo.
+                out (WHILE b DO c END) wli wlo.**)
+
+Tactic Notation "out_cases" tactic(first) ident(c) :=
+  first;
+  [ Case_aux c "O_SS" 
+  | Case_aux c "O_Seq" 
+  | Case_aux c "O_If"
+  | Case_aux c "O_WhileInv" ].
+  (*| Case_aux c "O_WhileVar" ].*)
+
 
 Notation "<< P >>  c  << Q >>" :=
   (out c P Q) (at level 90, c at next level).
@@ -259,17 +283,32 @@ Lemma subset_union : forall wl_s1 wl_s2 wls,
   subset wl_s1 wls -> subset (Union wakelock wl_s1 wl_s2) wls.
 Proof.
   intros wl_s1 wl_s2 wls H.
-Admitted.
+  induction H; subst.
+  constructor.
+  rewrite add_union. constructor. assumption.
+  rewrite add_union. apply Subset_Both_Add. assumption.
+Qed.
 
 Lemma subset_union_2 : forall wl_s1 wls1 wl,
   subset wl_s1 wls1 ->
   subset (Union wakelock (Add wakelock wl_empty_set wl) wl_s1) (wl :: wls1).
-Admitted.
+Proof.
+  intros wl_s1 wls1 wl H.
+  rewrite add_union. rewrite empty_S_union. apply Subset_Both_Add.
+  assumption.
+Qed.
 
 Lemma subset_minus : forall wl_s wls wl,
   isWlHeld wl wls = false ->
   subset wl_s wls ->
   subset (Setminus wakelock wl_s (Add wakelock wl_empty_set wl)) wls.
+Proof.
+  intros wl_s wls wl Hheld Hset.
+  induction Hset.
+  constructor.
+  destruct (eq_wl_dec wl wl0).
+  Case "wl = wl0". subst.
+  
 Admitted.
 
 Lemma subset_rm : forall wl st st' wl_s,
@@ -285,7 +324,110 @@ Theorem flow_subset : forall c wl_s1 wl_s2 wls1 wls2,
   (c / wls1 || wls2 ) ->
   subset wl_s2 wls2.
 Proof.
-  intros c.
+  (*intros c wl_s1 wl_s2 wls1 wls2 Hdup Hset Hflow Heval.
+  generalize dependent wls2.
+  generalize dependent wls1. 
+  out_cases (induction Hflow) Case; intros wls1 Hdup Hset wls2 Heval.
+  
+  Focus 4.
+  inversion Heval; subst.
+  assumption.
+  
+  eapply IHHflow.
+  apply Hdup. 
+ 
+
+  apply subset_union. assumption.
+
+  ceval_cases (induction Heval) SCase.
+  remember (WHILE b DO c END) as loopdef eqn:Hloop.
+  induction Hloop; subst.*)
+
+  intros c wl_s1 wl_s2 wls1 wls2 Hdup Hset Hflow Heval.
+  generalize dependent wl_s2.
+  generalize dependent wl_s1. 
+  ceval_cases (induction Heval) Case; intros wl_s1 Hset wl_s2 Hflow.
+
+  (* SKIP *)
+  inversion Hflow; subst.
+  inversion H0; inversion H1; subst.
+  rewrite empty_S_minus.
+  rewrite empty_S_union.
+  assumption.
+
+  (* SEQ *)
+  inversion Hflow; subst.
+  inversion H.
+  apply IHHeval2 with (wl_s1:= wls). 
+  apply never_dup in Heval1. apply Heval1. assumption.
+  apply IHHeval1 with (wl_s1:= wl_s1). 
+  assumption. assumption. assumption. assumption.
+
+  (* IFB *)
+  (* true *)
+  inversion Hflow; subst.
+  inversion H0.
+  apply subset_union.
+  apply IHHeval with (wl_s1:= wl_s1). 
+  assumption. assumption. assumption. 
+
+  (* false *)
+  inversion Hflow; subst.
+  inversion H0.
+  rewrite union_commute.
+  apply subset_union.
+  apply IHHeval with (wl_s1:= wl_s1). 
+  assumption. assumption. assumption. 
+
+  (*While*)
+  (* false *)
+  inversion Hflow; subst.
+  (* O_SS *)
+  inversion H0.
+  (* O_While *)
+  assumption.
+
+  (* true *)
+  inversion Hflow; subst.
+  inversion H0.
+
+  apply IHHeval2 with (wl_s1:=wl_s2).
+  apply never_dup in Heval1. apply Heval1. assumption.
+  eapply IHHeval1. assumption. apply Hset. assumption.
+  assumption.
+
+  (* ACQ *)
+  inversion Hflow; subst.
+  inversion H1; inversion H2; subst.
+  rewrite empty_S_minus.
+  apply subset_union_2.
+  assumption.
+
+  inversion Hflow; subst.
+  inversion H1; inversion H2; subst.
+  rewrite empty_S_minus.
+  rewrite union_commute.
+  apply subset_union.
+  assumption.
+
+  (* REL *)
+  inversion Hflow; subst.
+  inversion H0; inversion H1; subst.
+  apply no_dup_rm in Hdup.
+  rewrite empty_S_union.
+  apply subset_minus.
+  assumption.
+  eapply subset_rm.
+  apply Hset.
+  inversion Hflow; subst.
+  inversion H1; inversion H2; subst.
+  rewrite empty_S_union.
+  apply subset_minus.
+  assumption.
+  assumption.
+Qed.
+
+  (** intros c.
 
   com_cases (induction c) Case; subst; 
   intros  wl_s1 wl_s2 wls1 wls2 Hdup Hset Hflow Heval.  
@@ -325,12 +467,14 @@ Proof.
   apply IHc2 with (wl_s1:= wl_s1)(wls1:=wls1). 
   assumption. assumption. assumption. assumption.
 
-  (**WHILE
+  (**WHILE **)
   inversion Heval; subst.
+
+  (* false *)
   inversion Hflow; subst.
   inversion H.
   apply IHc with (wl_s1:=wl_s1)(wls1:=wls2).
-  assumption.**)
+  assumption. assumption.
   admit.
 
   (* ACQ *)
@@ -363,8 +507,8 @@ Proof.
   rewrite empty_S_union.
   apply subset_minus.
   assumption.
-  assumption.
-Qed.
+  assumption. 
+Qed.**)
 
 (*Theorem that states that if a program goes from a wl_empty_set 
   to another wl_empty_sey then we know it is a correct program.*)
