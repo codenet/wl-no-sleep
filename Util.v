@@ -132,9 +132,25 @@ Qed.
 
 Hint Rewrite S_S_union_empty.
 
+(* Lemma that states that a set (S1) plus and element (u) union another set (S2) 
+   is the same as the union of the two sets (S1 and S2) and the addittion of the element (u) *)
 Lemma add_union : forall U S1 S2 u,
   Union U (Add U S1 u) S2 = Add U (Union U S1 S2) u.
-Admitted.
+Proof.
+  intros U S1 S2 u.
+  apply Extensionality_Ensembles.
+  unfold Same_set.
+  unfold Included.
+  unfold In.
+  unfold Add.
+  split.
+  intros. inversion H. inversion H0.   apply Union_introl. apply Union_introl. assumption.
+  apply Union_intror. assumption.
+  apply Union_introl. apply Union_intror. assumption.
+  intros. inversion H. inversion H0. apply Union_introl. apply Union_introl. assumption.
+  apply Union_intror. assumption.
+  apply Union_introl. apply Union_intror. assumption.
+Qed.
 
 Hint Rewrite add_union.
 
