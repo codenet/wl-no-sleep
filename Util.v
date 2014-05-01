@@ -154,12 +154,15 @@ Qed.
 
 Hint Rewrite add_union.
 
-(*Lemma that states if we compare the same wakelock (wl) for equality yields always true.*)
-Lemma beq_wl_refl : forall wl,
-  true = beq_wl wl wl.
+Lemma in_minus : forall X x y s,
+  x <> y ->
+  In X s y ->
+  In X (Setminus X s (Add X (Empty_set X) x)) y.
 Proof.
-  intros. destruct wl as [n].
-  unfold beq_wl. apply beq_nat_refl.
+  intros X x y s Hxy Hin.
+  split.
+  assumption.
+  intros contra.
+  inversion contra; subst; inversion H; subst.
+  apply Hxy. reflexivity.
 Qed.
-
-Hint Rewrite beq_wl_refl.

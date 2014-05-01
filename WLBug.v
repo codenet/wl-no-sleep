@@ -241,18 +241,15 @@ Qed.
 
 Inductive subset : wl_set -> wlstate -> Prop :=
   | Subset_Nil : forall wl_s, subset wl_s empty_wlstate
-  | Subset_Set_Add : forall wl wl_s wls,
+  | Subset_Ind : forall wl wl_s wls,
              subset wl_s wls ->
-             subset (Add wakelock wl_s wl) wls
-  | Subset_Both_Add : forall wl wl_s wls,
-             subset wl_s wls ->
-             subset (Add wakelock wl_s wl) (wl :: wls). 
+             In wakelock wl_s wl ->
+             subset wl_s (wl :: wls). 
 
 Tactic Notation "subset_cases" tactic(first) ident(c) :=
   first;
   [ Case_aux c "Nil" 
-  | Case_aux c "Set_Add" 
-  | Case_aux c "Both_Add" ].
+  | Case_aux c "Set_Ind" ].
 
 Lemma subset_empty : subset wl_empty_set empty_wlstate.
 Proof.
@@ -263,20 +260,7 @@ Lemma subset_empty_2 : forall wls,
   subset wl_empty_set wls -> wls = empty_wlstate.
 Proof.
   intros wls H.
-  subset_cases (inversion H) Case. 
-  try auto. 
-
-  assert (Hcontra : In wakelock wl_empty_set wl).
-    rewrite <- H0. unfold In. unfold Add. 
-    apply Union_intror.
-    unfold In. constructor.
-  inversion Hcontra.
-
-  assert (Hcontra : In wakelock wl_empty_set wl).
-    rewrite <- H0. unfold In. unfold Add. 
-    apply Union_intror.
-    unfold In. constructor.
-  inversion Hcontra.
+  subset_cases (inversion H) Case; try auto; try solve by inversion.
 Qed.
 
 Lemma subset_union : forall wl_s1 wl_s2 wls,
@@ -285,17 +269,29 @@ Proof.
   intros wl_s1 wl_s2 wls H.
   induction H; subst.
   constructor.
-  rewrite add_union. constructor. assumption.
-  rewrite add_union. apply Subset_Both_Add. assumption.
+  constructor. assumption. apply Union_introl. assumption.
 Qed.
+
+Lemma subset_add : forall wl_s1 wls1 wl,
+  subset wl_s1 wls1 ->
+  subset (Add wakelock wl_s1 wl) (wl :: wls1).
+Proof.
+  intros wl_s1 wls1 wl H.
+  constructor.
+  induction wls1.
+  constructor.
+  inversion H; subst.
+  constructor. apply IHwls1.  assumption.
+  apply Union_introl. assumption.
+  apply Union_intror. constructor.
+Qed.  
 
 Lemma subset_union_2 : forall wl_s1 wls1 wl,
   subset wl_s1 wls1 ->
   subset (Union wakelock (Add wakelock wl_empty_set wl) wl_s1) (wl :: wls1).
 Proof.
   intros wl_s1 wls1 wl H.
-  rewrite add_union. rewrite empty_S_union. apply Subset_Both_Add.
-  assumption.
+  rewrite add_union. rewrite empty_S_union.  apply subset_add. assumption.
 Qed.
 
 Lemma subset_minus : forall wl_s wls wl,
@@ -303,18 +299,39 @@ Lemma subset_minus : forall wl_s wls wl,
   subset wl_s wls ->
   subset (Setminus wakelock wl_s (Add wakelock wl_empty_set wl)) wls.
 Proof.
-  intros wl_s wls wl Hheld Hset.
-  induction Hset.
+  intros wl_s wls.
+  induction wls as [| wl0 wls'].
   constructor.
+  intros wl Hheld Hset.
   destruct (eq_wl_dec wl wl0).
   Case "wl = wl0". subst.
-  
-Admitted.
+    simpl in Hheld. rewrite <- beq_wl_refl in Hheld. inversion Hheld.
+  Case "wl <> wl0".
+    inversion Hset; subst.
+    constructor. apply IHwls'. 
+    simpl in Hheld. apply beq_wl_false_iff in n.
+    rewrite n in Hheld. assumption. assumption.
+    apply in_minus; assumption.
+Qed.
 
 Lemma subset_rm : forall wl st st' wl_s,
   subset wl_s (st ++ wl :: st') ->
   subset wl_s (st ++ st').
-Admitted.
+Proof.
+  intros wl st.
+  induction st as [|wl0 st0]; intros st' wl_s H.
+  Case "[]".
+    simpl.
+    inversion H; subst. assumption.
+  Case "wl0 :: st0".
+    inversion H; subst.
+    rewrite <- app_comm_cons.
+    constructor.
+    apply IHst0.
+    rewrite <- app_comm_cons in H.  
+    assumption.
+    assumption.
+Qed.
 
 
 Theorem flow_subset : forall c wl_s1 wl_s2 wls1 wls2,
