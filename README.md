@@ -14,13 +14,7 @@ Description of the files
 * WLUtil.v - Utility theorems related to wakelocks
 * Util.v - Other utility theorems
 
-Order of Compilation
-------------------------
+Compilation
+-----------
 
-1. SfLib.v
-2. WLImp.v
-3. WLHoare.v
-4. Util.v
-5. WLUtil.v
-6. WLDup.v
-7. WLBug.v
+The project requires ``coq`` to compile. Run ``make`` to compile.
