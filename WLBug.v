@@ -217,11 +217,6 @@ Proof.
   rewrite empty_S_union. unfold Add. apply empty_S_union.
 Qed.
 
-Lemma flow_to_empty: forall c wls,
-  ( << wls >> c << wl_empty_set >> ) -> 
-  ( << wl_empty_set >> c << wl_empty_set >>).
-Admitted.
-
 (*Program example that goes from a wl_empty_set to a wl_empty_set using the out inductive definitions, 
   no sleep bug in this program*)
 Example test_flow_2 :
