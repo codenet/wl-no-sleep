@@ -162,12 +162,12 @@ Inductive out : com -> wl_set -> wl_set -> Prop :=
                 out c1 wli wlo1 ->
                 out c2 wli wlo2 ->
                 out (IFB b THEN c1 ELSE c2 FI) wli (Union wakelock wlo1 wlo2)
-     | O_WhileInv : forall wli b c,
+     (**| O_WhileInv : forall wli b c,
                 out c wli wli ->
-                out (WHILE b DO c END) wli wli.
-     (**| O_While : forall wli wlo b c,
+                out (WHILE b DO c END) wli wli.**)
+     | O_While : forall wli wlo b c,
                 out c wli wlo ->
-                out (WHILE b DO c END) wli (Union wakelock wli wlo).**)
+                out (WHILE b DO c END) wli (Union wakelock wli wlo).
 
      (**| O_While : forall wli wlg wlo b c,
                 gen c wlg ->
@@ -328,6 +328,259 @@ Proof.
     assumption.
 Qed.
 
+Theorem out_total_function: forall c wli,
+  exists wlo, (out c wli wlo).
+Proof.
+  intros c.
+  com_cases (induction c) Case; intros wli. 
+
+  (* SKIP *)
+  exists wli.
+  assert( H: (Union wakelock wl_empty_set (Setminus wakelock wli wl_empty_set)) = wli ).
+    rewrite empty_S_minus.
+    rewrite empty_S_union.
+    reflexivity.
+  rewrite <- H at 2.
+  apply O_SS; constructor.
+
+  (* SEQ *)
+  destruct IHc1 with (wli:=wli) as [wls].
+  destruct IHc2 with (wli:=wls) as [wlo].
+  exists wlo.
+  eapply O_Seq. apply H. assumption.
+  
+  (* IFB *)
+  destruct IHc1 with (wli:=wli) as [wlo1].
+  destruct IHc2 with (wli:=wli) as [wlo2].
+  exists (Union wakelock wlo1 wlo2).
+  constructor; assumption.
+
+  (* WHILE *)
+  destruct IHc with (wli:=wli) as [wlo].
+  exists (Union wakelock wli wlo).
+  constructor; assumption.
+
+  (* ACQ *)
+  exists (Union wakelock (Add wakelock wl_empty_set w) 
+                 (Setminus wakelock wli wl_empty_set)).
+  constructor; constructor.
+
+  (* REL *)
+  exists (Union wakelock wl_empty_set
+                 (Setminus wakelock wli (Add wakelock wl_empty_set w))).
+  constructor; constructor.
+Qed.
+
+Theorem out_deterministic: forall c wli wlo wlo',
+  out c wli wlo ->
+  out c wli wlo' ->
+  wlo = wlo'.
+Proof.
+  intros c.
+  com_cases (induction c) Case; intros wli wlo wlo' H H';
+  (* Solve SS cases *)
+  try (inversion H; inversion H'; subst;
+  inversion H7; inversion H8; inversion H1; inversion H2; subst; reflexivity);
+  (* Remove O_SS constructor from other cases *)
+  inversion H; try solve by inversion; 
+  inversion H'; try solve by inversion; subst.
+
+  Case ";;".
+  assert (Hs : wls = wls0 ).
+    eapply IHc1; eassumption.
+  subst.
+  eapply IHc2; eassumption.
+
+  Case "IFB".
+  assert (Hs : wlo0 = wlo1 ).
+    eapply IHc1; eassumption.
+  assert (Hs' : wlo2 = wlo3 ).
+    eapply IHc2; eassumption.
+  subst.
+  reflexivity.
+  
+  Case "WHILE".
+  assert (Hs : wlo0 = wlo1 ).
+    eapply IHc; eassumption.
+  subst.
+  reflexivity.
+Qed.
+
+Lemma flow_is_set_ops : forall c, exists wla wlb, forall wli,
+  << wli >> c << (Union wakelock wlb (Setminus wakelock wli wla)) >>.
+Proof with auto.
+  intros c.
+  com_cases (induction c) Case; 
+  (** Solve O_SS cases *)
+  try (eexists; eexists; intros wli; apply O_SS; econstructor).
+
+  Case ";;".
+    inversion_clear IHc1; inversion_clear H.
+    rename x into wla1. rename x0 into wlb1.
+
+    inversion_clear IHc2; inversion_clear H.
+    rename x into wla2. rename x0 into wlb2.
+
+    (** We know that -
+    wls = (wlb1 U (wli - wla1)) and
+    wlo = (wlb2 U (wls - wla2)). 
+    ->
+    wlo = (wlb2 U ((wlb1 U (wli - wla1)) - wla2))
+    For wlo = (wlb U (wli - wla)) to hold,
+      wla = (wla2 U (wla1 - (wlb1 U wlb2)) )
+      wlb = (wlb2 U (wlb1 - wla2) )
+    **)
+    remember (Union wakelock wla2 
+                  (Setminus wakelock wla1 (Union wakelock wlb1 wlb2) )) as wla.
+    remember (Union wakelock wlb2 (Setminus wakelock wlb1 wla2)) as wlb.
+    exists wla. 
+    exists wlb. 
+    intros wli.
+    eapply O_Seq. apply H0.
+
+    assert ( HU : Union wakelock wlb (Setminus wakelock wli wla)
+             = 
+             (Union wakelock wlb2 
+                (Setminus wakelock
+                   (Union wakelock wlb1 (Setminus wakelock wli wla1)) wla2) ) ).
+      SCase "Pf of assert".
+        apply Extensionality_Ensembles.
+        admit.
+        (**split.
+        SSCase "->".
+          intros w Hi.
+          inversion Hi; subst.
+          inversion H; subst.
+          apply Union_introl...
+          inversion H2; subst.
+          apply Union_intror.
+          constructor.
+          apply Union_introl...
+          assumption.
+
+          inversion H; subst.
+          apply Union_intror.
+          constructor.
+          apply Union_intror.
+          constructor.
+          assumption.**)
+    rewrite HU...
+
+  Case "IFB".
+    inversion_clear IHc1; inversion_clear H.
+    rename x into wla1. rename x0 into wlb1.
+
+    inversion_clear IHc2; inversion_clear H.
+    rename x into wla2. rename x0 into wlb2.
+
+    (** We know that -
+    wlo1 = (wlb1 U (wli - wla1)) and
+    wlo2 = (wlb2 U (wli - wla2)) and
+    wlo = (wlo1 U wlo2). 
+    ->
+    wlo = (wlb1 U (wli - wla1)) U (wlb2 U (wli - wla2))
+    ->
+    wlo = wlb1 U wlb2 U (wli - wla1) U (wli - wla2)
+    ->
+    For wlo = (wlb U (wli - wla)) to hold,
+      wla = ( wla1 ∩ wla2 ) - ( wlb1 U wlb2 )
+      wlb = wlb1 U wlb2
+    **)
+
+    remember (Setminus wakelock 
+                (Intersection wakelock wla1 wla2) (Union wakelock wlb1 wlb2)) as wla.
+    remember (Union wakelock wlb1 wlb2) as wlb.
+    exists wla. exists wlb. 
+    intros wli.
+    assert ( HU : 
+      ( Union wakelock wlb (Setminus wakelock wli wla) )
+      =
+      (Union wakelock (Union wakelock wlb1 (Setminus wakelock wli wla1))
+       (Union wakelock wlb2 (Setminus wakelock wli wla2))) ).
+      SCase "Pf of assert".
+        apply Extensionality_Ensembles.
+        (*split.
+        SSCase "->".
+        intros w Hi.
+        inversion Hi; subst.
+        inversion H; subst.*)
+    
+    admit.
+    rewrite HU.
+    eapply O_If...
+    
+  Case "WHILE".
+    inversion_clear IHc; inversion_clear H.
+    rename x into wla1. rename x0 into wlb1.
+
+    exists wl_empty_set. 
+    exists wlb1. 
+    intros wli.
+    rewrite empty_S_minus.
+    assert ( HU : Union wakelock wlb1 wli
+                  = (Union wakelock wli 
+                           (Union wakelock wlb1 (Setminus wakelock wli wla1))) ).
+      SCase "Proof of assert".
+      apply Extensionality_Ensembles.
+      split.
+      SSCase "->".
+        intros w H.
+        inversion H; subst.
+        apply Union_intror. apply Union_introl...
+        apply Union_introl...
+
+      SSCase "<-".
+        intros w H.
+        inversion H; subst. 
+        apply Union_intror...
+        inversion H1; subst. 
+        apply Union_introl...
+        inversion H2; subst. 
+        apply Union_intror...
+
+    rewrite HU.
+    apply O_While...
+Qed.
+
+Lemma flow_apply_twice_same : forall c wli wlo,
+  << wli >> c << wlo >> ->
+  << wlo >> c << wlo >>.
+Proof with auto.
+  intros c wli wlo H.
+  pose proof (flow_is_set_ops c) as Hf.
+  inversion_clear Hf; inversion_clear H0.
+  rename x into wla. rename x0 into wlb.
+
+  assert ( wlo = Union wakelock wlb (Setminus wakelock wli wla) ).
+    apply (out_deterministic c wli)...
+    
+  assert ( wlo = Union wakelock wlb (Setminus wakelock wlo wla) ).
+    rewrite H0.
+    apply Extensionality_Ensembles.
+    split.
+    Case "->".
+      intros w Hi.
+      inversion Hi; subst.
+      apply Union_introl...
+      inversion Hi; subst.
+      apply Union_introl...
+      inversion H0; subst.
+      apply Union_intror.
+      constructor.
+      apply Union_intror...
+      assumption.
+
+    Case "<-".
+      intros w Hi.
+      inversion Hi; subst.
+      apply Union_introl...
+      inversion H2; subst.
+      assumption.
+      
+  rewrite H2 at 2.
+  apply H1.
+Qed.
+
 
 Theorem flow_subset : forall c wl_s1 wl_s2 wls1 wls2,
   no_duplicate wls1 ->
@@ -336,25 +589,6 @@ Theorem flow_subset : forall c wl_s1 wl_s2 wls1 wls2,
   (c / wls1 || wls2 ) ->
   subset wl_s2 wls2.
 Proof.
-  (*intros c wl_s1 wl_s2 wls1 wls2 Hdup Hset Hflow Heval.
-  generalize dependent wls2.
-  generalize dependent wls1. 
-  out_cases (induction Hflow) Case; intros wls1 Hdup Hset wls2 Heval.
-  
-  Focus 4.
-  inversion Heval; subst.
-  assumption.
-  
-  eapply IHHflow.
-  apply Hdup. 
- 
-
-  apply subset_union. assumption.
-
-  ceval_cases (induction Heval) SCase.
-  remember (WHILE b DO c END) as loopdef eqn:Hloop.
-  induction Hloop; subst.*)
-
   intros c wl_s1 wl_s2 wls1 wls2 Hdup Hset Hflow Heval.
   generalize dependent wl_s2.
   generalize dependent wl_s1. 
@@ -397,16 +631,21 @@ Proof.
   (* O_SS *)
   inversion H0.
   (* O_While *)
+  apply subset_union.
   assumption.
 
   (* true *)
   inversion Hflow; subst.
   inversion H0.
 
-  apply IHHeval2 with (wl_s1:=wl_s2).
+  apply IHHeval2 with (wl_s1:=(Union wakelock wl_s1 wlo)).
   apply never_dup in Heval1. apply Heval1. assumption.
-  eapply IHHeval1. assumption. apply Hset. assumption.
-  assumption.
+  rewrite union_commute.
+  apply subset_union.
+  eapply IHHeval1. assumption. apply Hset. assumption. 
+  clear Heval1 Heval2 IHHeval1 IHHeval2 Hset H Hdup.
+  eapply flow_apply_twice_same.
+  apply Hflow.
 
   (* ACQ *)
   inversion Hflow; subst.
@@ -438,89 +677,6 @@ Proof.
   assumption.
   assumption.
 Qed.
-
-  (** intros c.
-
-  com_cases (induction c) Case; subst; 
-  intros  wl_s1 wl_s2 wls1 wls2 Hdup Hset Hflow Heval.  
-
-  (* SKIP *)
-  inversion Heval; subst.
-  inversion Hflow; subst. 
-  inversion H0; subst.
-  inversion H1; subst. 
-  rewrite empty_S_minus.
-  rewrite empty_S_union.
-  assumption.
-  
-  (* SEQ *)
-  inversion Heval; subst.
-  inversion Hflow; subst.
-  inversion H.
-  apply IHc2 with (wl_s1:= wls)(wls1:=st'). 
-  apply never_dup in H1. apply H1. assumption.
-  apply IHc1 with (wl_s1:= wl_s1)(wls1:=wls1). 
-  assumption. assumption. assumption. assumption. assumption. assumption.
-
-  (* IFB *)
-  inversion Heval; subst.
-  (* true *)
-  inversion Hflow; subst.
-  inversion H.
-  apply subset_union.
-  apply IHc1 with (wl_s1:= wl_s1)(wls1:=wls1). 
-  assumption. assumption. assumption. assumption.
-
-  (* false *)
-  inversion Hflow; subst.
-  inversion H.
-  rewrite union_commute.
-  apply subset_union.
-  apply IHc2 with (wl_s1:= wl_s1)(wls1:=wls1). 
-  assumption. assumption. assumption. assumption.
-
-  (**WHILE **)
-  inversion Heval; subst.
-
-  (* false *)
-  inversion Hflow; subst.
-  inversion H.
-  apply IHc with (wl_s1:=wl_s1)(wls1:=wls2).
-  assumption. assumption.
-  admit.
-
-  (* ACQ *)
-  inversion Heval; subst.
-  inversion Hflow; subst.
-  inversion H1; inversion H2; subst.
-  rewrite empty_S_minus.
-  apply subset_union_2.
-  assumption.
-
-  inversion Hflow; subst.
-  inversion H1; inversion H2; subst.
-  rewrite empty_S_minus.
-  rewrite union_commute.
-  apply subset_union.
-  assumption.
-
-  (* REL *)
-  inversion Heval; subst.
-  inversion Hflow; subst.
-  inversion H0; inversion H1; subst.
-  apply no_dup_rm in Hdup.
-  rewrite empty_S_union.
-  apply subset_minus.
-  assumption.
-  eapply subset_rm.
-  apply Hset.
-  inversion Hflow; subst.
-  inversion H1; inversion H2; subst.
-  rewrite empty_S_union.
-  apply subset_minus.
-  assumption.
-  assumption. 
-Qed.**)
 
 (*Theorem that states that if a program goes from a wl_empty_set 
   to another wl_empty_sey then we know it is a correct program.*)
@@ -551,3 +707,4 @@ Proof.
   apply flow_no_bug.
   assumption.
 Qed.
+
