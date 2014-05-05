@@ -427,11 +427,10 @@ Proof with auto.
     ->
     wlo = (wlb2 U ((wlb1 U (wli - wla1)) - wla2))
     For wlo = (wlb U (wli - wla)) to hold,
-      wla = (wla2 U (wla1 - (wlb1 U wlb2)) )
+      wla = (wla2 U wla1)
       wlb = (wlb2 U (wlb1 - wla2) )
     **)
-    remember (Union wakelock wla2 
-                  (Setminus wakelock wla1 (Union wakelock wlb1 wlb2) )) as wla.
+    remember (Union wakelock wla2 wla1) as wla.
     remember (Union wakelock wlb2 (Setminus wakelock wlb1 wla2)) as wlb.
     exists wla. 
     exists wlb. 
@@ -445,8 +444,7 @@ Proof with auto.
                    (Union wakelock wlb1 (Setminus wakelock wli wla1)) wla2) ) ).
       SCase "Pf of assert".
         apply Extensionality_Ensembles.
-        admit.
-        (**split.
+        split.
         SSCase "->".
           intros w Hi.
           inversion Hi; subst.
@@ -463,7 +461,26 @@ Proof with auto.
           constructor.
           apply Union_intror.
           constructor.
-          assumption.**)
+          assumption.
+          apply not_in_union in H3.
+          inversion H3...
+          apply not_in_union in H3.
+          inversion H3...
+
+        SSCase "<-".
+          intros w Hi.
+          inversion Hi; subst.
+          apply Union_introl.
+          apply Union_introl...
+          inversion H; subst.
+          inversion H2; subst.
+          apply Union_introl.
+          apply Union_intror.
+          constructor...
+          apply Union_intror.
+          inversion H4.
+          constructor...
+          apply not_in_union...
     rewrite HU...
 
   Case "IFB".
@@ -483,12 +500,11 @@ Proof with auto.
     wlo = wlb1 U wlb2 U (wli - wla1) U (wli - wla2)
     ->
     For wlo = (wlb U (wli - wla)) to hold,
-      wla = ( wla1 ∩ wla2 ) - ( wlb1 U wlb2 )
+      wla = ( wla1 ∩ wla2 )
       wlb = wlb1 U wlb2
     **)
 
-    remember (Setminus wakelock 
-                (Intersection wakelock wla1 wla2) (Union wakelock wlb1 wlb2)) as wla.
+    remember (Intersection wakelock wla1 wla2) as wla.
     remember (Union wakelock wlb1 wlb2) as wlb.
     exists wla. exists wlb. 
     intros wli.
@@ -499,13 +515,47 @@ Proof with auto.
        (Union wakelock wlb2 (Setminus wakelock wli wla2))) ).
       SCase "Pf of assert".
         apply Extensionality_Ensembles.
-        (*split.
+        split.
         SSCase "->".
-        intros w Hi.
-        inversion Hi; subst.
-        inversion H; subst.*)
-    
-    admit.
+          intros w Hi.
+          inversion Hi; subst.
+          inversion H; subst.
+          apply Union_introl.
+          apply Union_introl...
+          apply Union_intror.
+          apply Union_introl...
+
+          inversion H; subst.
+          apply not_in_intersect in H3.
+          inversion H3.
+          apply Union_introl.
+          apply Union_intror.
+          constructor...
+          apply Union_intror.
+          apply Union_intror.
+          constructor...
+        SSCase "<-".
+          intros w Hi.
+          inversion Hi; subst.
+          inversion H; subst.
+          apply Union_introl.
+          apply Union_introl...
+          inversion H2; subst.
+          apply Union_intror.
+          constructor...
+          intros Hinter.
+          apply H4.
+          inversion Hinter; subst...
+
+          inversion H; subst.
+          apply Union_introl.
+          apply Union_intror...
+          inversion H2; subst.
+          apply Union_intror.
+          constructor...
+          intros Hinter.
+          apply H4.
+          inversion Hinter; subst...       
     rewrite HU.
     eapply O_If...
     

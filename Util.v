@@ -173,3 +173,16 @@ Lemma same_union : forall X s,
   Union X s s = s.
 Admitted.
 Hint Rewrite same_union : ensemble.
+
+Lemma not_in_intersect : forall X x s1 s2,
+  ~ In X (Intersection X s1 s2) x <-> ~ In X s1 x \/ ~ In X s2 x.
+Admitted.
+
+Hint Rewrite not_in_intersect : ensemble.
+
+Lemma not_in_union : forall X x s1 s2,
+  ~ In X (Union X s1 s2) x <-> ~ In X s1 x /\ ~ In X s2 x.
+Admitted.
+
+Hint Rewrite not_in_union : ensemble.
+
