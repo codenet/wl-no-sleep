@@ -171,18 +171,84 @@ Hint Rewrite in_minus : ensemble.
 
 Lemma same_union : forall X s,
   Union X s s = s.
-Admitted.
+Proof.
+  intros.  
+  apply Extensionality_Ensembles.
+  unfold Same_set.
+  unfold Included.
+  split; intros.
+  inversion H; apply H0.
+  apply Union_intror.
+  assumption.
+Qed.
+
 Hint Rewrite same_union : ensemble.
+
 
 Lemma not_in_intersect : forall X x s1 s2,
   ~ In X (Intersection X s1 s2) x <-> ~ In X s1 x \/ ~ In X s2 x.
-Admitted.
+Proof.
+  intros.
+  split.
+  intros.
+  (* -> *)  
+  unfold not in *.
+  intros.
+  left.
+  intros.
+  apply H.
+  unfold In in *.
+  apply Intersection_intro.
+  assumption.
+    SearchAbout Intersection.
+    SearchAbout Disjoint.
+  admit.
+  (* <- *)
+  intros.
+  unfold not in *.
+  unfold In in *.
+  intros.
+  inversion H.
+  apply H1.
+  inversion H0.
+  assumption.
+  apply H1.
+  inversion H0.
+  assumption.
+Qed.
 
 Hint Rewrite not_in_intersect : ensemble.
 
 Lemma not_in_union : forall X x s1 s2,
   ~ In X (Union X s1 s2) x <-> ~ In X s1 x /\ ~ In X s2 x.
-Admitted.
+Proof.
+  intros.
+  split.
+  (*->*)
+  intros.
+  split.
+  unfold In in *.
+  unfold not in *.
+  intros.
+  apply H.
+  apply Union_introl.
+  assumption.
+  unfold not in *.
+  intros.
+  apply H.
+  apply Union_intror.
+  assumption.
+  (*<-*)
+  intros [Hleft Hright].
+  unfold not in *.
+  unfold In in *.
+  intros.
+  inversion H.
+  apply Hleft.
+  apply H0.
+  apply Hright. 
+  apply H0.
+Qed.
 
 Hint Rewrite not_in_union : ensemble.
 
