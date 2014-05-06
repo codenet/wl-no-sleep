@@ -178,11 +178,35 @@ Lemma not_in_intersect : forall X x s1 s2,
   ~ In X (Intersection X s1 s2) x <-> ~ In X s1 x \/ ~ In X s2 x.
 Admitted.
 
-Hint Rewrite not_in_intersect : ensemble.
+Hint Resolve not_in_intersect : ensemble.
 
 Lemma not_in_union : forall X x s1 s2,
   ~ In X (Union X s1 s2) x <-> ~ In X s1 x /\ ~ In X s2 x.
 Admitted.
 
-Hint Rewrite not_in_union : ensemble.
+Hint Resolve not_in_union : ensemble.
+
+Ltac invert_all :=
+  match goal with
+    | [ H1 : In _ (Union _ _ _) _ |- ?goal ] => 
+                    inversion H1; subst; clear H1; invert_all
+    | [ H1 : In _ (Setminus _ _ _) _ |- ?goal ] => 
+                    inversion H1; subst; clear H1; invert_all
+    | [ H1 : ~In _ (Union _ _ _) _ |- ?goal ] => 
+                    apply not_in_union in H1; invert_all
+    | [ H1 : ~In _ (Intersection _ _ _) _ |- ?goal ] => 
+                    apply not_in_intersect in H1; invert_all
+    | [ H1 : _ /\ _ |- ?goal ] => 
+                    inversion H1; subst; clear H1; invert_all
+    | [ H1 : _ \/ _ |- ?goal ] => 
+                    inversion H1; subst; clear H1; invert_all
+    | _ => idtac
+  end.
+
+Tactic Notation "set_eq" :=
+  apply Extensionality_Ensembles;
+  split; intros w Hi;
+  invert_all;
+  try solve by inversion;
+  auto 10 with sets ensemble.
 

@@ -406,6 +406,7 @@ Proof.
   reflexivity.
 Qed.
 
+
 Lemma flow_is_set_ops : forall c, exists wla wlb, forall wli,
   << wli >> c << (Union wakelock wlb (Setminus wakelock wli wla)) >>.
 Proof with auto.
@@ -443,44 +444,10 @@ Proof with auto.
                 (Setminus wakelock
                    (Union wakelock wlb1 (Setminus wakelock wli wla1)) wla2) ) ).
       SCase "Pf of assert".
-        apply Extensionality_Ensembles.
-        split.
-        SSCase "->".
-          intros w Hi.
-          inversion Hi; subst.
-          inversion H; subst.
-          apply Union_introl...
-          inversion H2; subst.
-          apply Union_intror.
-          constructor.
-          apply Union_introl...
-          assumption.
-
-          inversion H; subst.
-          apply Union_intror.
-          constructor.
-          apply Union_intror.
-          constructor.
-          assumption.
-          apply not_in_union in H3.
-          inversion H3...
-          apply not_in_union in H3.
-          inversion H3...
-
-        SSCase "<-".
-          intros w Hi.
-          inversion Hi; subst.
-          apply Union_introl.
-          apply Union_introl...
-          inversion H; subst.
-          inversion H2; subst.
-          apply Union_introl.
-          apply Union_intror.
-          constructor...
-          apply Union_intror.
-          inversion H4.
-          constructor...
-          apply not_in_union...
+        set_eq.
+        apply Union_intror.
+        constructor...
+        apply not_in_union...
     rewrite HU...
 
   Case "IFB".
@@ -514,48 +481,14 @@ Proof with auto.
       (Union wakelock (Union wakelock wlb1 (Setminus wakelock wli wla1))
        (Union wakelock wlb2 (Setminus wakelock wli wla2))) ).
       SCase "Pf of assert".
-        apply Extensionality_Ensembles.
-        split.
-        SSCase "->".
-          intros w Hi.
-          inversion Hi; subst.
-          inversion H; subst.
-          apply Union_introl.
-          apply Union_introl...
-          apply Union_intror.
-          apply Union_introl...
+        set_eq.
+        apply Union_intror.
+        constructor...
+        apply not_in_intersect...
 
-          inversion H; subst.
-          apply not_in_intersect in H3.
-          inversion H3.
-          apply Union_introl.
-          apply Union_intror.
-          constructor...
-          apply Union_intror.
-          apply Union_intror.
-          constructor...
-        SSCase "<-".
-          intros w Hi.
-          inversion Hi; subst.
-          inversion H; subst.
-          apply Union_introl.
-          apply Union_introl...
-          inversion H2; subst.
-          apply Union_intror.
-          constructor...
-          intros Hinter.
-          apply H4.
-          inversion Hinter; subst...
-
-          inversion H; subst.
-          apply Union_introl.
-          apply Union_intror...
-          inversion H2; subst.
-          apply Union_intror.
-          constructor...
-          intros Hinter.
-          apply H4.
-          inversion Hinter; subst...       
+        apply Union_intror.
+        constructor...
+        apply not_in_intersect...
     rewrite HU.
     eapply O_If...
     
@@ -571,23 +504,7 @@ Proof with auto.
                   = (Union wakelock wli 
                            (Union wakelock wlb1 (Setminus wakelock wli wla1))) ).
       SCase "Proof of assert".
-      apply Extensionality_Ensembles.
-      split.
-      SSCase "->".
-        intros w H.
-        inversion H; subst.
-        apply Union_intror. apply Union_introl...
-        apply Union_introl...
-
-      SSCase "<-".
-        intros w H.
-        inversion H; subst. 
-        apply Union_intror...
-        inversion H1; subst. 
-        apply Union_introl...
-        inversion H2; subst. 
-        apply Union_intror...
-
+        set_eq.
     rewrite HU.
     apply O_While...
 Qed.
@@ -606,27 +523,7 @@ Proof with auto.
     
   assert ( wlo = Union wakelock wlb (Setminus wakelock wlo wla) ).
     rewrite H0.
-    apply Extensionality_Ensembles.
-    split.
-    Case "->".
-      intros w Hi.
-      inversion Hi; subst.
-      apply Union_introl...
-      inversion Hi; subst.
-      apply Union_introl...
-      inversion H0; subst.
-      apply Union_intror.
-      constructor.
-      apply Union_intror...
-      assumption.
-
-    Case "<-".
-      intros w Hi.
-      inversion Hi; subst.
-      apply Union_introl...
-      inversion H2; subst.
-      assumption.
-      
+    set_eq.
   rewrite H2 at 2.
   apply H1.
 Qed.
