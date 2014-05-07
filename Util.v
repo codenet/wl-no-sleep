@@ -13,7 +13,7 @@ Proof.
   assumption; assumption.
 Qed.
 
-Hint Rewrite intersect_commute : ensemble.
+Hint Resolve intersect_commute : ensemble.
 
 (* Lemma that states that the union is commutative, B union C equals C union B.*)
 Lemma union_commute: forall U B C, 
@@ -26,7 +26,7 @@ Proof.
   [apply Union_intror | apply Union_introl | apply Union_intror | apply Union_introl]; assumption.
 Qed.
 
-Hint Rewrite union_commute : ensemble.
+Hint Resolve union_commute : ensemble.
 
 (*Lemma that states that the intersection of an empty set with another set (B) is always the empty set.*)
 Lemma empty_intersect: forall U B, 
@@ -37,7 +37,7 @@ Proof.
   unfold Same_set. split; unfold Included; intros x H; inversion H; try assumption.
 Qed.
 
-Hint Rewrite empty_intersect : ensemble.
+Hint Resolve empty_intersect : ensemble.
 
 (*Lemma that states that some set (S) minus an empty set is always that some set(S).*)
 Lemma empty_S_minus: forall U S, 
@@ -53,7 +53,7 @@ Proof.
     intros Hcontra. inversion Hcontra.    
 Qed.
 
-Hint Rewrite empty_S_minus : ensemble.
+Hint Resolve empty_S_minus : ensemble.
 
 (*Lemma that states that the some set (S) minus an empty set is always that set(S).*)
 Lemma empty_minus: forall U, 
@@ -63,7 +63,7 @@ Proof.
   apply empty_S_minus.
 Qed.
 
-Hint Rewrite empty_minus : ensemble.
+Hint Resolve empty_minus : ensemble.
 
 (* Lemma that states that some set (S) minus that same set (S) is always the empty set.*)
 Lemma same_minus: forall U S, 
@@ -78,7 +78,7 @@ Proof.
     inversion H.
 Qed.
 
-Hint Rewrite same_minus : ensemble.
+Hint Resolve same_minus : ensemble.
 
 (*Lemma that states that the empty set minus some set(S) is always the empty set.*)
 Lemma empty_minus_S: forall U S, 
@@ -93,7 +93,7 @@ Proof.
     inversion H.
 Qed.
 
-Hint Rewrite empty_minus_S : ensemble.
+Hint Resolve empty_minus_S : ensemble.
 
 (*Lemma that states that the empty set union some set (S) is always that some set (S).*)
 Lemma empty_S_union: forall U S, 
@@ -108,7 +108,7 @@ Proof.
     apply Union_intror. assumption.
 Qed.
 
-Hint Rewrite empty_S_union : ensemble.
+Hint Resolve empty_S_union : ensemble.
 
 (*Lemma that states that the union of two empty set is always de empty set*)
 Lemma empty_union: forall U, 
@@ -116,7 +116,7 @@ Lemma empty_union: forall U,
 Proof.
   intros U. rewrite empty_S_union. reflexivity. Qed.
 
-Hint Rewrite empty_union : ensemble.
+Hint Resolve empty_union : ensemble.
 
 (*Lemma that states that if we know that union of some two sets (S1 and S2) is equal to the empty set.
   Then we can conclude that the first of those sets (S1) is equal to empty set.*)
@@ -130,7 +130,7 @@ Proof.
   unfold Included. intros w. intros Hcontra. inversion Hcontra.
 Qed.
 
-Hint Rewrite S_S_union_empty : ensemble.
+Hint Resolve S_S_union_empty : ensemble.
 
 (* Lemma that states that a set (S1) plus and element (u) union another set (S2) 
    is the same as the union of the two sets (S1 and S2) and the addittion of the element (u) *)
@@ -152,7 +152,7 @@ Proof.
   apply Union_introl. apply Union_intror. assumption.
 Qed.
 
-Hint Rewrite add_union : ensemble.
+Hint Resolve add_union : ensemble.
 
 Lemma in_minus : forall X x y s,
   x <> y ->
@@ -167,7 +167,7 @@ Proof.
   apply Hxy. reflexivity.
 Qed.
 
-Hint Rewrite in_minus : ensemble.
+Hint Resolve in_minus : ensemble.
 
 Lemma same_union : forall X s,
   Union X s s = s.
@@ -182,7 +182,7 @@ Proof.
   assumption.
 Qed.
 
-Hint Rewrite same_union : ensemble.
+Hint Resolve same_union : ensemble.
 
 
 Lemma not_in_intersect : forall X x s1 s2,

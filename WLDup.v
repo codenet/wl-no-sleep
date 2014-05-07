@@ -10,6 +10,8 @@ Inductive no_duplicate : Assertion :=
                ~ appears_in wl st ->
                no_duplicate (wl :: st).
 
+Hint Resolve No_Empty No_Ind : wl.
+
 (*Lemma that states if in wl_state(wakelock list), some wakelock (wl) is not held.
   If we remove a wakelock (wl') from that wl_state, then we know that the wakelock
  (wl) will also not be held in the resultin wl_state.*)

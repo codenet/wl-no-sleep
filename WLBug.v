@@ -48,6 +48,7 @@ Qed.
 (*We define wl_set as a set of wakelocks using built in Coq Ensembles.*)
 Definition wl_set : Type := Ensemble wakelock.
 Definition wl_empty_set : wl_set := Empty_set wakelock.
+Hint Resolve wl_empty_set: ensemble.
 
 (* We define the action of Gen of the reaching definition for every command using conservative analysis.*)
 Inductive gen : com -> wl_set -> Prop := 
@@ -100,13 +101,13 @@ Proof.
   apply K_Seq. constructor.
   replace wl_empty_set with 
     (Intersection wakelock (Add wakelock wl_empty_set WL0) wl_empty_set).
-  apply K_If. apply K_Rel. apply K_SKIP.
+  repeat constructor.  
+  apply empty_intersect.
   
-  apply empty_intersect. 
   replace wl_empty_set with (Union wakelock wl_empty_set wl_empty_set).
-  
-  apply G_If. constructor. constructor. apply empty_union. rewrite empty_minus.
-  apply empty_union.
+  repeat constructor.
+  apply empty_union. 
+  rewrite empty_minus. apply empty_union. 
 Qed.
 
 (* Example of a program that acquires a wakelock but only release it in one branch of the IF
@@ -121,16 +122,16 @@ Proof.
   replace (Add wakelock wl_empty_set WL0) 
       with (Union wakelock (Add wakelock wl_empty_set WL0) 
                   (Setminus wakelock wl_empty_set wl_empty_set)).
-  apply G_Seq. constructor.
+  repeat constructor.
   replace wl_empty_set with 
     (Union wakelock wl_empty_set wl_empty_set).
-  apply G_If. apply G_Rel. apply G_SKIP.
-  
-  apply empty_union. 
+  repeat constructor.
+
+  apply empty_union.  
   replace (wl_empty_set) 
       with (Intersection wakelock (Add wakelock wl_empty_set WL0) wl_empty_set).
-
-  apply K_If. constructor. constructor. apply empty_intersect.
+  repeat constructor.
+  apply empty_intersect.
   rewrite empty_minus. rewrite union_commute. apply empty_S_union.
 Qed.
 
@@ -162,26 +163,16 @@ Inductive out : com -> wl_set -> wl_set -> Prop :=
                 out c1 wli wlo1 ->
                 out c2 wli wlo2 ->
                 out (IFB b THEN c1 ELSE c2 FI) wli (Union wakelock wlo1 wlo2)
-     (**| O_WhileInv : forall wli b c,
-                out c wli wli ->
-                out (WHILE b DO c END) wli wli.**)
      | O_While : forall wli wlo b c,
                 out c wli wlo ->
                 out (WHILE b DO c END) wli (Union wakelock wli wlo).
-
-     (**| O_While : forall wli wlg wlo b c,
-                gen c wlg ->
-                out c (Union wakelock wli wlg) wlo ->
-                out (WHILE b DO c END) wli wlo.**)
 
 Tactic Notation "out_cases" tactic(first) ident(c) :=
   first;
   [ Case_aux c "O_SS" 
   | Case_aux c "O_Seq" 
   | Case_aux c "O_If"
-  | Case_aux c "O_WhileInv" ].
-  (*| Case_aux c "O_WhileVar" ].*)
-
+  | Case_aux c "O_While" ].
 
 Notation "<< P >>  c  << Q >>" :=
   (out c P Q) (at level 90, c at next level).
@@ -198,22 +189,21 @@ Example test_flow_1 :
   << (Add wakelock wl_empty_set WL0) >>.
 Proof. 
   eapply O_Seq.
-  apply O_SS.
-  constructor.
-  constructor.
-  constructor.
+  apply O_SS; constructor.
   rewrite empty_minus. rewrite union_commute. rewrite empty_S_union.
   apply O_If.
   remember (Add wakelock wl_empty_set WL0) as wli. 
   replace (wl_empty_set) 
     with (Union wakelock wl_empty_set (Setminus wakelock (Add wakelock wl_empty_set WL0) (Add wakelock wl_empty_set WL0))).
   subst.
-  apply O_SS. constructor. constructor. constructor. rewrite same_minus. apply empty_union. 
+  repeat constructor.
+  rewrite same_minus. apply empty_union. 
 
   replace (Singleton wakelock WL0) 
   with (Union wakelock wl_empty_set (Setminus wakelock (Add wakelock wl_empty_set WL0) wl_empty_set)).
 
-  apply O_SS. constructor. constructor. constructor. rewrite empty_S_minus. 
+  apply O_SS; constructor. 
+  rewrite empty_S_minus. 
   rewrite empty_S_union. unfold Add. apply empty_S_union.
 Qed.
 
@@ -225,7 +215,7 @@ Example test_flow_2 :
   << wl_empty_set >>.
 Proof.
   eapply O_Seq.
-  apply O_SS. constructor. constructor. constructor.
+  apply O_SS; constructor.
   rewrite empty_minus. rewrite union_commute. rewrite empty_S_union.
   remember (Add wakelock wl_empty_set WL0) as wli. 
   replace (wl_empty_set) 
@@ -246,10 +236,7 @@ Tactic Notation "subset_cases" tactic(first) ident(c) :=
   [ Case_aux c "Nil" 
   | Case_aux c "Set_Ind" ].
 
-Lemma subset_empty : subset wl_empty_set empty_wlstate.
-Proof.
-  constructor.
-Qed.
+Hint Resolve Subset_Nil Subset_Ind : wl.
 
 Lemma subset_empty_2 : forall wls,
   subset wl_empty_set wls -> wls = empty_wlstate.
@@ -336,7 +323,7 @@ Proof.
 
   (* SKIP *)
   exists wli.
-  assert( H: (Union wakelock wl_empty_set (Setminus wakelock wli wl_empty_set)) = wli ).
+  assert( H: (Union wakelock wl_empty_set (Setminus wakelock wli wl_empty_set)) = wli ).    
     rewrite empty_S_minus.
     rewrite empty_S_union.
     reflexivity.
@@ -405,7 +392,6 @@ Proof.
   subst.
   reflexivity.
 Qed.
-
 
 Lemma flow_is_set_ops : forall c, exists wla wlb, forall wli,
   << wli >> c << (Union wakelock wlb (Setminus wakelock wli wla)) >>.
@@ -535,94 +521,70 @@ Theorem flow_subset : forall c wl_s1 wl_s2 wls1 wls2,
   (<< wl_s1 >> c << wl_s2 >>) ->
   (c / wls1 || wls2 ) ->
   subset wl_s2 wls2.
-Proof.
+Proof with auto.
   intros c wl_s1 wl_s2 wls1 wls2 Hdup Hset Hflow Heval.
   generalize dependent wl_s2.
   generalize dependent wl_s1. 
-  ceval_cases (induction Heval) Case; intros wl_s1 Hset wl_s2 Hflow.
+  ceval_cases (induction Heval) Case; intros wl_s1 Hset wl_s2 Hflow;
+  inversion Hflow; subst; try solve by inversion.
 
   (* SKIP *)
-  inversion Hflow; subst.
   inversion H0; inversion H1; subst.
   rewrite empty_S_minus.
-  rewrite empty_S_union.
-  assumption.
+  rewrite empty_S_union...
 
   (* SEQ *)
-  inversion Hflow; subst.
-  inversion H.
-  apply IHHeval2 with (wl_s1:= wls). 
-  apply never_dup in Heval1. apply Heval1. assumption.
-  apply IHHeval1 with (wl_s1:= wl_s1). 
-  assumption. assumption. assumption. assumption.
+  apply IHHeval2 with (wl_s1:= wls)...
+  apply never_dup in Heval1...
+  apply IHHeval1 with (wl_s1:= wl_s1)...
 
   (* IFB *)
   (* true *)
-  inversion Hflow; subst.
-  inversion H0.
   apply subset_union.
-  apply IHHeval with (wl_s1:= wl_s1). 
-  assumption. assumption. assumption. 
-
+  apply IHHeval with (wl_s1:= wl_s1)...
+  
   (* false *)
-  inversion Hflow; subst.
-  inversion H0.
   rewrite union_commute.
   apply subset_union.
-  apply IHHeval with (wl_s1:= wl_s1). 
-  assumption. assumption. assumption. 
+  apply IHHeval with (wl_s1:= wl_s1)...
 
   (*While*)
   (* false *)
-  inversion Hflow; subst.
-  (* O_SS *)
-  inversion H0.
-  (* O_While *)
-  apply subset_union.
-  assumption.
+  apply subset_union...
 
   (* true *)
-  inversion Hflow; subst.
-  inversion H0.
-
   apply IHHeval2 with (wl_s1:=(Union wakelock wl_s1 wlo)).
-  apply never_dup in Heval1. apply Heval1. assumption.
+  apply never_dup in Heval1...
   rewrite union_commute.
   apply subset_union.
-  eapply IHHeval1. assumption. apply Hset. assumption. 
+  eapply IHHeval1...
+  apply Hset...
+  assumption. 
   clear Heval1 Heval2 IHHeval1 IHHeval2 Hset H Hdup.
   eapply flow_apply_twice_same.
   apply Hflow.
 
   (* ACQ *)
-  inversion Hflow; subst.
   inversion H1; inversion H2; subst.
   rewrite empty_S_minus.
-  apply subset_union_2.
-  assumption.
+  apply subset_union_2...
 
-  inversion Hflow; subst.
   inversion H1; inversion H2; subst.
   rewrite empty_S_minus.
   rewrite union_commute.
-  apply subset_union.
-  assumption.
+  apply subset_union...
 
   (* REL *)
-  inversion Hflow; subst.
   inversion H0; inversion H1; subst.
   apply no_dup_rm in Hdup.
   rewrite empty_S_union.
-  apply subset_minus.
-  assumption.
+  apply subset_minus...
   eapply subset_rm.
   apply Hset.
-  inversion Hflow; subst.
+
   inversion H1; inversion H2; subst.
   rewrite empty_S_union.
-  apply subset_minus.
-  assumption.
-  assumption.
+  apply subset_minus...
 Qed.
 
 (*Theorem that states that if a program goes from a wl_empty_set 
@@ -630,18 +592,13 @@ Qed.
 Theorem flow_no_bug : forall c,
   (<< wl_empty_set >> c << wl_empty_set >>) ->
   (correct_program c).
-Proof.
+Proof with eauto with wl.
   intros c H st st' Heval Hpre. 
   unfold correct_program. 
   unfold hoare_triple.
   inversion Hpre; subst.
   assert ( Hempty : subset wl_empty_set st' ). 
-    eapply flow_subset with (wls1:=empty_wlstate)(wl_s1:=wl_empty_set)(c:=c).
-    constructor.
-    apply subset_empty.
-    assumption.
-    assumption.
-  
+    eapply flow_subset with (wls1:=empty_wlstate)(wl_s1:=wl_empty_set)(c:=c)...
   apply subset_empty_2 in Hempty. subst. constructor.
 Qed.
 
