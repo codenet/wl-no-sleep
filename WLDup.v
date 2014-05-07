@@ -55,6 +55,21 @@ Proof.
     constructor. auto.
 Qed.
 
+Lemma add_appears_in: forall {X:Type} (x x' : X) lx lx',
+                       appears_in x' (lx ++ lx') ->
+                       appears_in x' (lx ++ (x::lx')).
+Proof.
+  intros X x x' lx lx' H.
+  induction lx as [| y ly].
+  Case "[]". 
+    simpl in *. constructor. assumption.
+  Case "y :: ly".
+    inversion H; subst.
+    constructor. 
+    constructor. auto.
+Qed.
+
+
 (*Lemma that states that if in the concatenation of two lists and one includes 
   the element wl there are no duplicate wakelocks, then it will not be 
   duplicate wakelocks in the concatenation of those two lists without wl.*)
@@ -147,7 +162,78 @@ Proof.
   eapply rm_mid_no_dup. apply Hst.
 Qed.
 
+Lemma appears_in_app : forall (X:Type) (x:X) l1 l2,
+  (appears_in x (l1 ++ l2)) <-> (appears_in x l1) \/ (appears_in x l2).
+Proof.
+  intros X x l1 l2.
+  split; intros H.
+  Case "->".
+    induction l1 as [|y l1'].
+    simpl in H. right. assumption.
+    rewrite <- app_comm_cons in H.
+    inversion H; subst.
+    left. constructor.
+    apply IHl1' in H1. 
+    inversion H1. 
+    left. constructor. assumption.
+    right. assumption.
+  Case "<-".
+    inversion H.
+    induction l1 as [|y l1'].
+    inversion H0.
+    inversion H0; subst.
+    rewrite <- app_comm_cons.
+    constructor.
+    rewrite <- app_comm_cons.
+    constructor.
+    apply IHl1'.
+    left. assumption. assumption.
+
+    induction l2 as [|y l2'].
+    inversion H0.
+    inversion H0; subst.
+    clear H H0 IHl2'.
+    induction l1 as [|z l1'].
+    simpl. constructor.
+    apply ai_later. apply IHl1'. 
+    apply add_appears_in. 
+    apply IHl2'. right. assumption. assumption.
+Qed.
+
+Lemma no_dup_sublist : forall l1 l2,
+  no_duplicate (l1 ++ l2) -> no_duplicate l2.
+Proof with auto.
+  intros l1 l2 H.
+  induction l1 as [| x l1'].
+  simpl in H...
+  inversion H; subst.
+  apply IHl1' in H2...
+Qed.
+
 Lemma no_dup_rm : forall wl st st',
   no_duplicate (st ++ wl :: st') ->
   isWlHeld wl (st ++ st') = false.
-Admitted.
+Proof with auto.
+  intros wl st st' H.
+  apply isWlHeld_appear.
+  intros contra.
+  apply appears_in_app in contra. 
+  inversion contra.
+  induction st as [| wl' st'']; try solve by inversion.
+  inversion H0; subst.
+  inversion H; subst.
+  apply H4.
+  clear H H0 H3 H4 contra IHst''.
+  induction st''.
+  simpl. constructor.
+  constructor. assumption.
+
+  inversion H; subst.
+  apply IHst''...
+    
+  induction st' as [| wl' st'']; try solve by inversion.
+  apply no_dup_sublist in H.
+  inversion H; subst.
+  inversion H3; subst...
+Qed.
+
