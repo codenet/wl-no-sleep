@@ -249,6 +249,7 @@ Qed.
 
 Hint Resolve not_in_union : ensemble.
 
+(** Invert all hypothesis interesting to proving that two sets are equal *)
 Ltac invert_all :=
   match goal with
     | [ H1 : In _ (Union _ _ _) _ |- ?goal ] => 
@@ -266,6 +267,7 @@ Ltac invert_all :=
     | _ => idtac
   end.
 
+(** Tactic to prove that two sets are equal *)
 Tactic Notation "set_eq" :=
   apply Extensionality_Ensembles;
   split; intros w Hi;

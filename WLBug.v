@@ -9,14 +9,14 @@ Require Export Util.
 Inductive no_bug: Assertion := 
   | No_Bug: no_bug empty_wlstate. 
 
-Hint Constructors no_bug.
+Hint Constructors no_bug : wl.
 
 (*We define a correct program as a program that starts in a no_bug state 
 (empty_wlstate, the list of wakelocks is empty) and after a command it also ends up in a no_bug state*)
 Definition correct_program (c: com) : Prop :=
   {{ no_bug }} c {{ no_bug }}.
 
-Hint Unfold correct_program.
+Hint Unfold correct_program : wl.
 
 (* If we have a program that doesn't acquire any wakelock then we can conclude that is a correct program*)
 Theorem no_acq_no_bug : forall c,
@@ -315,6 +315,9 @@ Proof.
     assumption.
 Qed.
 
+(** First we prove that out can be written as a Fixpoint definition. For that
+    we prove that out is a total function and that out is deterministic. **)
+
 Theorem out_total_function: forall c wli,
   exists wlo, (out c wli wlo).
 Proof.
@@ -393,6 +396,39 @@ Proof.
   reflexivity.
 Qed.
 
+
+(** 
+The rest of the thorems proved are to support the main theorem of this work -
+
+- flow_no_bug. flow_no_bug states that if the RD analysis showed
+that the program has no bug, then the program is indeed a correct program. But
+that gets stuck while proving with induction in the "c1;; c2" step. The induction
+hypothesis gives us that both c1 and c2 command start with an empty set. But, 
+output of c1 is not necesarilly empty set, hence c2 command might not start with
+empty set. To overcome this problem, we first prove another theorem
+
+- flow_subset. flow_subset states that the set of currently acquired wakelocks kept
+by RD analysis is always super set of the actual set in the program. The most 
+important case for this theorem, (as expected) is while. Induction does not directly
+work for while because the while input in RD analysis (in "out" definition) is
+not a loop invariant. The input to while in RD analysis is any random set. This proof
+starts to look hopeless at first. But, we exploit and prove a very neat property
+that enables this proof
+
+- flow_apply_twice_same. flow_apply_twice_same states that if we apply the same flow
+equations twice on any input, then the output will not have any effect. This theorem
+follows directly from
+
+- flow_is_set_ops. flow_is_set_ops states that each command in the RD analysis does
+a fixed set operations. It adds a few wakelocks and removes a few wakelocks. Hence, 
+applying the same set operations twice is the same as applying it once (stmt of
+flow_apply_twice_same).
+
+( flow_subset also requires another important lemma never_dup (in WLDup.v). 
+never_dup states that our program semantic will never have duplicate wakelocks 
+in the state. )
+
+**)
 Lemma flow_is_set_ops : forall c, exists wla wlb, forall wli,
   << wli >> c << (Union wakelock wlb (Setminus wakelock wli wla)) >>.
 Proof with auto.
