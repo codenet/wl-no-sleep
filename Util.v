@@ -184,25 +184,22 @@ Qed.
 
 Hint Resolve same_union : ensemble.
 
+Axiom de_morgan_not_and_not : forall P Q:Prop,
+  ~(P /\ Q) -> (~P \/ ~Q).
 
 Lemma not_in_intersect : forall X x s1 s2,
-  ~ In X (Intersection X s1 s2) x <-> ~ In X s1 x \/ ~ In X s2 x.
+  ~ In X (Intersection X s1 s2) x <-> ~ (In X s1 x) \/ ~ (In X s2 x).
 Proof.
   intros.
   split.
   intros.
   (* -> *)  
+  apply de_morgan_not_and_not with (P:= (In X s1 x))(Q:= (In X s2 x)).
   unfold not in *.
   intros.
-  left.
-  intros.
   apply H.
-  unfold In in *.
-  apply Intersection_intro.
-  assumption.
-    SearchAbout Intersection.
-    SearchAbout Disjoint.
-  admit.
+  inversion H0.
+  constructor; assumption.
   (* <- *)
   intros.
   unfold not in *.
